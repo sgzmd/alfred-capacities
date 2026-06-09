@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>bundleid</key>
-	<string>com.rokirill.alfred-capacities</string>
+	<string>cc.kirillov.alfred-capacities</string>
 	<key>category</key>
 	<string>Productivity</string>
 	<key>connections</key>
@@ -75,7 +75,7 @@
 		</array>
 	</dict>
 	<key>createdby</key>
-	<string>Antigravity</string>
+	<string>Roman Kirillov</string>
 	<key>description</key>
 	<string>Quickly capture notes to your Capacities daily note.</string>
 	<key>name</key>
@@ -383,8 +383,8 @@
 		</dict>
 	</array>
 	<key>webaddress</key>
-	<string>https://github.com/rokirill/alfred-capacities</string>
+	<string>https://github.com/sgzmd/alfred-capacities</string>
 	<key>version</key>
-	<string>1.0.0</string>
+	<string>1.0.1</string>
 </dict>
 </plist>

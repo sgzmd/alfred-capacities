@@ -66,7 +66,7 @@ function run(argv) {
             const sid = s.id;
             const title = s.title;
             const iconData = s.icon || {};
-            const emoji = (iconData.type === "emoji") ? (iconData.val || "🧠") : "🧠";
+            const emoji = (iconData.type === "emoji") ? (iconData.val || "🚀") : "🚀";
             
             return {
                 uid: sid,
