@@ -1,0 +1,5 @@
+# Alfred Release Builds
+*.alfredworkflow
+
+# macOS System Files
+.DS_Store
