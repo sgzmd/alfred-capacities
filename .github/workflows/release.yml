@@ -1,0 +1,52 @@
+name: Release Workflow
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Extract Version
+        id: get_version
+        run: |
+          VERSION=$(python3 -c "import plistlib; print(plistlib.load(open('info.plist', 'rb')).get('version', '1.0.0'))")
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+      - name: Check if Release Exists
+        id: check_tag
+        run: |
+          if git rev-parse "v${{ env.VERSION }}" >/dev/null 2>&1; then
+            echo "Tag v${{ env.VERSION }} already exists. Skipping release."
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "Tag v${{ env.VERSION }} does not exist. Creating release."
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Package Workflow
+        if: steps.check_tag.outputs.exists == 'false'
+        run: |
+          chmod +x package.sh
+          ./package.sh
+
+      - name: Create GitHub Release
+        if: steps.check_tag.outputs.exists == 'false'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ env.VERSION }}
+          name: Release v${{ env.VERSION }}
+          files: Capacities_Quick_Capture.alfredworkflow
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
