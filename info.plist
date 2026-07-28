@@ -143,7 +143,7 @@
 				<key>argumenttype</key>
 				<integer>0</integer>
 				<key>keyword</key>
-				<string>ctlog</string>
+				<string>today</string>
 				<key>subtext</key>
 				<string>Append to today's Daily Note with #DailyLog</string>
 				<key>text</key>
@@ -164,7 +164,7 @@
 				<key>argumenttype</key>
 				<integer>2</integer>
 				<key>keyword</key>
-				<string>mdlink</string>
+				<string>cap:web</string>
 				<key>subtext</key>
 				<string>Copy the active Chrome page link and save a Weblink asynchronously</string>
 				<key>text</key>

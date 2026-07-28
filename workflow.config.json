@@ -1,7 +1,7 @@
 {
   "keywords": {
     "dailyNote": "cap",
-    "dailyLog": "ctlog",
-    "weblink": "mdlink"
+    "dailyLog": "today",
+    "weblink": "cap:web"
   }
 }
