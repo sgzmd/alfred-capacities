@@ -1,5 +1,8 @@
 # Alfred Release Builds
 *.alfredworkflow
+dist/
+coverage/
+node_modules/
 
 # macOS System Files
 .DS_Store

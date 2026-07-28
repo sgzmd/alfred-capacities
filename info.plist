@@ -12,7 +12,7 @@
 		<array>
 			<dict>
 				<key>destinationuid</key>
-				<string>B1_RUN_SCRIPT</string>
+				<string>B1_DAILY_NOTE</string>
 				<key>modifiers</key>
 				<integer>0</integer>
 				<key>modifiersubtext</key>
@@ -25,7 +25,7 @@
 		<array>
 			<dict>
 				<key>destinationuid</key>
-				<string>B1_RUN_SCRIPT</string>
+				<string>B1_DAILY_NOTE</string>
 				<key>modifiers</key>
 				<integer>0</integer>
 				<key>modifiersubtext</key>
@@ -34,11 +34,11 @@
 				<false/>
 			</dict>
 		</array>
-		<key>A3_SCRIPT_FILTER</key>
+		<key>A3_TODAY</key>
 		<array>
 			<dict>
 				<key>destinationuid</key>
-				<string>B2_SET_SPACE</string>
+				<string>B2_DAILY_LOG</string>
 				<key>modifiers</key>
 				<integer>0</integer>
 				<key>modifiersubtext</key>
@@ -47,11 +47,11 @@
 				<false/>
 			</dict>
 		</array>
-		<key>B1_RUN_SCRIPT</key>
+		<key>A4_WEBLINK</key>
 		<array>
 			<dict>
 				<key>destinationuid</key>
-				<string>C1_NOTIFICATION</string>
+				<string>B3_WEBLINK_CAPTURE</string>
 				<key>modifiers</key>
 				<integer>0</integer>
 				<key>modifiersubtext</key>
@@ -60,11 +60,24 @@
 				<false/>
 			</dict>
 		</array>
-		<key>B2_SET_SPACE</key>
+		<key>B1_DAILY_NOTE</key>
 		<array>
 			<dict>
 				<key>destinationuid</key>
-				<string>C2_NOTIFICATION</string>
+				<string>C1_DAILY_NOTE_NOTIFICATION</string>
+				<key>modifiers</key>
+				<integer>0</integer>
+				<key>modifiersubtext</key>
+				<string></string>
+				<key>vitoclose</key>
+				<false/>
+			</dict>
+		</array>
+		<key>B2_DAILY_LOG</key>
+		<array>
+			<dict>
+				<key>destinationuid</key>
+				<string>C2_DAILY_LOG_NOTIFICATION</string>
 				<key>modifiers</key>
 				<integer>0</integer>
 				<key>modifiersubtext</key>
@@ -77,7 +90,7 @@
 	<key>createdby</key>
 	<string>Roman Kirillov</string>
 	<key>description</key>
-	<string>Quickly capture notes to your Capacities daily note.</string>
+	<string>Capture notes, Daily Logs, and browser Weblinks to Capacities.</string>
 	<key>name</key>
 	<string>Capacities Quick Capture</string>
 	<key>objects</key>
@@ -90,7 +103,7 @@
 				<key>keyword</key>
 				<string>cap</string>
 				<key>subtext</key>
-				<string>Type note to send to daily note</string>
+				<string>Type a note to append to today's Daily Note</string>
 				<key>text</key>
 				<string>Send to Capacities Daily Note</string>
 				<key>withspace</key>
@@ -115,7 +128,7 @@
 				<key>acceptsurls</key>
 				<false/>
 				<key>actionname</key>
-				<string>Send to Capacities</string>
+				<string>Send to Capacities Daily Note</string>
 			</dict>
 			<key>type</key>
 			<string>alfred.workflow.trigger.universalaction</string>
@@ -127,12 +140,54 @@
 		<dict>
 			<key>config</key>
 			<dict>
+				<key>argumenttype</key>
+				<integer>0</integer>
+				<key>keyword</key>
+				<string>today</string>
+				<key>subtext</key>
+				<string>Append to today's Daily Note with #DailyLog</string>
+				<key>text</key>
+				<string>Add Capacities Daily Log</string>
+				<key>withspace</key>
+				<true/>
+			</dict>
+			<key>type</key>
+			<string>alfred.workflow.input.keyword</string>
+			<key>uid</key>
+			<string>A3_TODAY</string>
+			<key>version</key>
+			<integer>1</integer>
+		</dict>
+		<dict>
+			<key>config</key>
+			<dict>
+				<key>argumenttype</key>
+				<integer>1</integer>
+				<key>keyword</key>
+				<string>mdutil</string>
+				<key>subtext</key>
+				<string>Optionally add body text, then capture the active Chrome page</string>
+				<key>text</key>
+				<string>Capture Chrome Page to Capacities</string>
+				<key>withspace</key>
+				<true/>
+			</dict>
+			<key>type</key>
+			<string>alfred.workflow.input.keyword</string>
+			<key>uid</key>
+			<string>A4_WEBLINK</string>
+			<key>version</key>
+			<integer>1</integer>
+		</dict>
+		<dict>
+			<key>config</key>
+			<dict>
 				<key>concurrently</key>
 				<false/>
 				<key>escaping</key>
 				<integer>102</integer>
 				<key>script</key>
-				<string>osascript -l JavaScript send_to_daily_note.js "$1"</string>
+				<string>osascript -l JavaScript daily-note.js "$1"</string>
 				<key>scriptargtype</key>
 				<integer>1</integer>
 				<key>scriptfile</key>
@@ -143,7 +198,53 @@
 			<key>type</key>
 			<string>alfred.workflow.action.script</string>
 			<key>uid</key>
-			<string>B1_RUN_SCRIPT</string>
+			<string>B1_DAILY_NOTE</string>
+			<key>version</key>
+			<integer>2</integer>
+		</dict>
+		<dict>
+			<key>config</key>
+			<dict>
+				<key>concurrently</key>
+				<false/>
+				<key>escaping</key>
+				<integer>102</integer>
+				<key>script</key>
+				<string>osascript -l JavaScript daily-log.js "$1"</string>
+				<key>scriptargtype</key>
+				<integer>1</integer>
+				<key>scriptfile</key>
+				<string></string>
+				<key>type</key>
+				<integer>0</integer>
+			</dict>
+			<key>type</key>
+			<string>alfred.workflow.action.script</string>
+			<key>uid</key>
+			<string>B2_DAILY_LOG</string>
+			<key>version</key>
+			<integer>2</integer>
+		</dict>
+		<dict>
+			<key>config</key>
+			<dict>
+				<key>concurrently</key>
+				<false/>
+				<key>escaping</key>
+				<integer>102</integer>
+				<key>script</key>
+				<string>osascript -l JavaScript capture.js "$1"</string>
+				<key>scriptargtype</key>
+				<integer>1</integer>
+				<key>scriptfile</key>
+				<string></string>
+				<key>type</key>
+				<integer>0</integer>
+			</dict>
+			<key>type</key>
+			<string>alfred.workflow.action.script</string>
+			<key>uid</key>
+			<string>B3_WEBLINK_CAPTURE</string>
 			<key>version</key>
 			<integer>2</integer>
 		</dict>
@@ -164,83 +265,9 @@
 			<key>type</key>
 			<string>alfred.workflow.output.notification</string>
 			<key>uid</key>
-			<string>C1_NOTIFICATION</string>
+			<string>C1_DAILY_NOTE_NOTIFICATION</string>
 			<key>version</key>
 			<integer>1</integer>
-		</dict>
-		<dict>
-			<key>config</key>
-			<dict>
-				<key>argumenttype</key>
-				<integer>2</integer>
-				<key>keyword</key>
-				<string>cap:space</string>
-				<key>queuedelaycustom</key>
-				<integer>3</integer>
-				<key>queuedelayimmediatelyinitially</key>
-				<true/>
-				<key>queuedelaymode</key>
-				<integer>0</integer>
-				<key>queuemode</key>
-				<integer>1</integer>
-				<key>runningsubtext</key>
-				<string>Fetching spaces...</string>
-				<key>script</key>
-				<string>osascript -l JavaScript list_spaces.js</string>
-				<key>scriptargtype</key>
-				<integer>1</integer>
-				<key>subtext</key>
-				<string>Fetches and sets your active space</string>
-				<key>title</key>
-				<string>Select Capacities Space</string>
-				<key>type</key>
-				<integer>0</integer>
-			</dict>
-			<key>type</key>
-			<string>alfred.workflow.input.scriptfilter</string>
-			<key>uid</key>
-			<string>A3_SCRIPT_FILTER</string>
-			<key>version</key>
-			<integer>3</integer>
-		</dict>
-		<dict>
-			<key>config</key>
-			<dict>
-				<key>concurrently</key>
-				<false/>
-				<key>escaping</key>
-				<integer>102</integer>
-				<key>script</key>
-				<string>function run(argv) {
-    const spaceId = argv[0];
-    const spaceTitle = $.NSProcessInfo.processInfo.environment.objectForKey("space_title").js;
-
-    const alfred = Application("Alfred 5");
-    
-    // Save to configuration persistently
-    alfred.setConfiguration("CAPACITIES_SPACE_ID", {
-        toValue: spaceId,
-        inWorkflow: "com.rokirill.alfred-capacities"
-    });
-
-    alfred.setConfiguration("CAPACITIES_SPACE_TITLE", {
-        toValue: spaceTitle,
-        inWorkflow: "com.rokirill.alfred-capacities"
-    });
-
-    return spaceTitle;
-}</string>
-				<key>scriptargtype</key>
-				<integer>1</integer>
-				<key>type</key>
-				<integer>7</integer>
-			</dict>
-			<key>type</key>
-			<string>alfred.workflow.action.script</string>
-			<key>uid</key>
-			<string>B2_SET_SPACE</string>
-			<key>version</key>
-			<integer>2</integer>
 		</dict>
 		<dict>
 			<key>config</key>
@@ -252,14 +279,14 @@
 				<key>removeextension</key>
 				<false/>
 				<key>text</key>
-				<string>Space set to {query}</string>
+				<string>{query}</string>
 				<key>title</key>
-				<string>Capacities Configured</string>
+				<string>Capacities Daily Log</string>
 			</dict>
 			<key>type</key>
 			<string>alfred.workflow.output.notification</string>
 			<key>uid</key>
-			<string>C2_NOTIFICATION</string>
+			<string>C2_DAILY_LOG_NOTIFICATION</string>
 			<key>version</key>
 			<integer>1</integer>
 		</dict>
@@ -267,124 +294,109 @@
 	<key>uidata</key>
 	<dict>
 		<key>A1_KEYWORD</key>
-		<dict>
-			<key>xpos</key>
-			<integer>50</integer>
-			<key>ypos</key>
-			<integer>50</integer>
-		</dict>
+		<dict><key>xpos</key><integer>50</integer><key>ypos</key><integer>50</integer></dict>
 		<key>A2_UNIVERSAL</key>
-		<dict>
-			<key>xpos</key>
-			<integer>50</integer>
-			<key>ypos</key>
-			<integer>170</integer>
-		</dict>
-		<key>A3_SCRIPT_FILTER</key>
-		<dict>
-			<key>xpos</key>
-			<integer>50</integer>
-			<key>ypos</key>
-			<integer>310</integer>
-		</dict>
-		<key>B1_RUN_SCRIPT</key>
-		<dict>
-			<key>xpos</key>
-			<integer>270</integer>
-			<key>ypos</key>
-			<integer>100</integer>
-		</dict>
-		<key>B2_SET_SPACE</key>
-		<dict>
-			<key>xpos</key>
-			<integer>270</integer>
-			<key>ypos</key>
-			<integer>310</integer>
-		</dict>
-		<key>C1_NOTIFICATION</key>
-		<dict>
-			<key>xpos</key>
-			<integer>490</integer>
-			<key>ypos</key>
-			<integer>100</integer>
-		</dict>
-		<key>C2_NOTIFICATION</key>
-		<dict>
-			<key>xpos</key>
-			<integer>490</integer>
-			<key>ypos</key>
-			<integer>310</integer>
-		</dict>
+		<dict><key>xpos</key><integer>50</integer><key>ypos</key><integer>150</integer></dict>
+		<key>A3_TODAY</key>
+		<dict><key>xpos</key><integer>50</integer><key>ypos</key><integer>270</integer></dict>
+		<key>A4_WEBLINK</key>
+		<dict><key>xpos</key><integer>50</integer><key>ypos</key><integer>390</integer></dict>
+		<key>B1_DAILY_NOTE</key>
+		<dict><key>xpos</key><integer>290</integer><key>ypos</key><integer>100</integer></dict>
+		<key>B2_DAILY_LOG</key>
+		<dict><key>xpos</key><integer>290</integer><key>ypos</key><integer>270</integer></dict>
+		<key>B3_WEBLINK_CAPTURE</key>
+		<dict><key>xpos</key><integer>290</integer><key>ypos</key><integer>390</integer></dict>
+		<key>C1_DAILY_NOTE_NOTIFICATION</key>
+		<dict><key>xpos</key><integer>530</integer><key>ypos</key><integer>100</integer></dict>
+		<key>C2_DAILY_LOG_NOTIFICATION</key>
+		<dict><key>xpos</key><integer>530</integer><key>ypos</key><integer>270</integer></dict>
 	</dict>
 	<key>userconfigurationconfig</key>
 	<array>
 		<dict>
 			<key>config</key>
 			<dict>
-				<key>default</key>
-				<string></string>
-				<key>placeholder</key>
-				<string>Enter your Capacities token</string>
-				<key>required</key>
-				<true/>
-				<key>trim</key>
-				<true/>
+				<key>default</key><string></string>
+				<key>placeholder</key><string>cap-api-…</string>
+				<key>required</key><true/>
+				<key>trim</key><true/>
 			</dict>
 			<key>description</key>
-			<string>Generate token from Settings &gt; Capacities API in the desktop app.</string>
-			<key>label</key>
-			<string>Capacities API Token</string>
-			<key>type</key>
-			<string>textfield</string>
-			<key>variable</key>
-			<string>CAPACITIES_TOKEN</string>
+			<string>Create a space-scoped token with read and write access in Capacities Settings &gt; Capacities API.</string>
+			<key>label</key><string>Capacities API Token</string>
+			<key>type</key><string>textfield</string>
+			<key>variable</key><string>CAPACITIES_API_TOKEN</string>
 		</dict>
 		<dict>
 			<key>config</key>
 			<dict>
-				<key>default</key>
-				<string></string>
-				<key>placeholder</key>
-				<string>Run cap:space to select automatically</string>
-				<key>required</key>
-				<false/>
-				<key>trim</key>
-				<true/>
+				<key>default</key><string>3</string>
+				<key>placeholder</key><string>3</string>
+				<key>required</key><false/>
+				<key>trim</key><true/>
 			</dict>
-			<key>description</key>
-			<string>The active space UUID where daily notes are saved.</string>
-			<key>label</key>
-			<string>Active Space ID</string>
-			<key>type</key>
-			<string>textfield</string>
-			<key>variable</key>
-			<string>CAPACITIES_SPACE_ID</string>
+			<key>description</key><string>Number of substantive paragraphs added to new Weblinks (0–20).</string>
+			<key>label</key><string>Weblink Paragraphs</string>
+			<key>type</key><string>textfield</string>
+			<key>variable</key><string>CAPACITIES_PARAGRAPH_COUNT</string>
 		</dict>
 		<dict>
 			<key>config</key>
 			<dict>
-				<key>default</key>
-				<string></string>
-				<key>placeholder</key>
-				<string>Selected Space Title</string>
-				<key>required</key>
-				<false/>
-				<key>trim</key>
-				<true/>
+				<key>default</key><string></string>
+				<key>placeholder</key><string>socks5h://127.0.0.1:1080</string>
+				<key>required</key><false/>
+				<key>trim</key><true/>
 			</dict>
-			<key>description</key>
-			<string>Human-readable title of your chosen space.</string>
-			<key>label</key>
-			<string>Space Title</string>
-			<key>type</key>
-			<string>textfield</string>
-			<key>variable</key>
-			<string>CAPACITIES_SPACE_TITLE</string>
+			<key>description</key><string>Optional SOCKS5 proxy. Use socks5h:// to resolve DNS through the proxy.</string>
+			<key>label</key><string>SOCKS5 Proxy</string>
+			<key>type</key><string>textfield</string>
+			<key>variable</key><string>CAPACITIES_SOCKS5_PROXY</string>
+		</dict>
+		<dict>
+			<key>config</key>
+			<dict>
+				<key>default</key><string>10</string>
+				<key>placeholder</key><string>10</string>
+				<key>required</key><false/>
+				<key>trim</key><true/>
+			</dict>
+			<key>description</key><string>Connection timeout in seconds (1–120).</string>
+			<key>label</key><string>Connect Timeout</string>
+			<key>type</key><string>textfield</string>
+			<key>variable</key><string>CAPACITIES_CONNECT_TIMEOUT</string>
+		</dict>
+		<dict>
+			<key>config</key>
+			<dict>
+				<key>default</key><string>45</string>
+				<key>placeholder</key><string>45</string>
+				<key>required</key><false/>
+				<key>trim</key><true/>
+			</dict>
+			<key>description</key><string>Total request timeout in seconds (1–300).</string>
+			<key>label</key><string>Request Timeout</string>
+			<key>type</key><string>textfield</string>
+			<key>variable</key><string>CAPACITIES_REQUEST_TIMEOUT</string>
+		</dict>
+		<dict>
+			<key>config</key>
+			<dict>
+				<key>default</key><string>2</string>
+				<key>placeholder</key><string>2</string>
+				<key>required</key><false/>
+				<key>trim</key><true/>
+			</dict>
+			<key>description</key><string>Retries for transient network, rate-limit, and server failures (0–5).</string>
+			<key>label</key><string>Retries</string>
+			<key>type</key><string>textfield</string>
+			<key>variable</key><string>CAPACITIES_RETRIES</string>
 		</dict>
 	</array>
 	<key>webaddress</key>
 	<string>https://github.com/sgzmd/alfred-capacities</string>
 	<key>version</key>
-	<string>1.0.1</string>
+	<string>1.1.0</string>
 </dict>
 </plist>

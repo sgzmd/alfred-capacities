@@ -1,0 +1,35 @@
+{
+  "name": "alfred-capacities",
+  "version": "1.1.0",
+  "private": true,
+  "description": "Dependency-free Alfred workflow for Capacities quick capture",
+  "type": "module",
+  "scripts": {
+    "quality": "biome check src tests scripts package.json tsconfig.json vitest.config.ts workflow.config.json && knip",
+    "quality:fix": "biome check --write src tests scripts package.json tsconfig.json vitest.config.ts workflow.config.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --coverage",
+    "build": "npm run typecheck && node scripts/build.mjs",
+    "package": "npm run build && bash package.sh",
+    "check": "npm run quality && npm run build && npm test"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.6",
+    "@capacities/api": "^0.1.0",
+    "@types/mdast": "^4.0.4",
+    "@types/node": "^24.0.0",
+    "@types/whatwg-url": "^13.0.0",
+    "@vitest/coverage-v8": "^4.1.10",
+    "esbuild": "^0.28.1",
+    "knip": "^6.29.0",
+    "plist": "^5.0.0",
+    "typescript": "^5.8.0",
+    "vitest": "^4.1.10"
+  },
+  "dependencies": {
+    "@kayahr/text-encoding": "^2.0.1",
+    "js-sha256": "^0.11.1",
+    "mdast-util-to-markdown": "^2.1.2",
+    "whatwg-url": "^14.2.0"
+  }
+}
