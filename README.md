@@ -25,7 +25,8 @@ Type `today <entry>` to append the entry to today's Daily Note with
 
 ### Chrome Weblink capture
 
-Type `cap:web` while Google Chrome has an active HTTP or HTTPS page.
+Type `mdutil` while Google Chrome has an active HTTP or HTTPS page. Optionally
+provide text after the keyword, for example `mdutil Follow up tomorrow`.
 
 The foreground action:
 
@@ -38,8 +39,9 @@ The background job:
 1. Searches Capacities Weblinks and verifies candidate URLs exactly after
    conservative normalization.
 2. Reports when the Weblink already exists.
-3. Otherwise creates a Weblink with the page title and the configured number of
-   substantive introductory paragraphs as Markdown notes.
+3. Otherwise creates a Weblink with the optional supplied text copied verbatim,
+   followed by the configured number of substantive introductory paragraphs as
+   Markdown notes.
 4. Shows a later success or failure notification.
 
 Chrome must have **View > Developer > Allow JavaScript from Apple Events**
@@ -124,7 +126,7 @@ Trigger words are configured in the top-level `workflow.config.json`:
   "keywords": {
     "dailyNote": "cap",
     "dailyLog": "today",
-    "weblink": "cap:web"
+    "weblink": "mdutil"
   }
 }
 ```

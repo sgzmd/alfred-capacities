@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { formatDailyLog, formatMarkdownLink, normalizeParagraphs } from "../src/core/markdown";
+import {
+  combineWeblinkBody,
+  formatDailyLog,
+  formatMarkdownLink,
+  normalizeParagraphs
+} from "../src/core/markdown";
 
 describe("Markdown helpers", () => {
   it("escapes link labels and destinations", () => {
@@ -20,6 +25,13 @@ describe("Markdown helpers", () => {
     expect(normalizeParagraphs([null, 3, " short ", ` ${long}\n`, `${long} second`], 1)).toBe(long);
     expect(normalizeParagraphs([long], -1)).toBe("");
     expect(normalizeParagraphs("not an array", 3)).toBe("");
+  });
+
+  it("adds optional Weblink text verbatim before the page excerpt", () => {
+    const supplied = "  First line\n*literal* [text](target)\nLast line  ";
+    expect(combineWeblinkBody("", "Page excerpt")).toBe("Page excerpt");
+    expect(combineWeblinkBody(supplied, "")).toBe(supplied);
+    expect(combineWeblinkBody(supplied, "Page excerpt")).toBe(`${supplied}\n\nPage excerpt`);
   });
 
   it("formats Daily Log entries", () => {

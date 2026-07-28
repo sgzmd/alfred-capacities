@@ -1,5 +1,5 @@
 import { readParagraphCount } from "../core/config";
-import { formatMarkdownLink, normalizeParagraphs } from "../core/markdown";
+import { combineWeblinkBody, formatMarkdownLink, normalizeParagraphs } from "../core/markdown";
 import type { WeblinkJob } from "../core/types";
 import { canonicalizeWebUrl } from "../core/url";
 import {
@@ -42,7 +42,7 @@ function captureChromePage(paragraphCount: number): {
   return { title, url, markdown: normalizeParagraphs(parsed, paragraphCount) };
 }
 
-export function captureRun(): string {
+export function captureRun(argv: string[]): string {
   initializeJxa();
   try {
     const env = environment();
@@ -64,7 +64,7 @@ export function captureRun(): string {
       kind: "weblink",
       title: page.title,
       url: page.url,
-      markdown: page.markdown
+      markdown: combineWeblinkBody(argv[0] ?? "", page.markdown)
     };
     const jobPath = joinPath(cache, `weblink-${uniqueId()}.json`);
     writeText(jobPath, JSON.stringify(job));

@@ -73,7 +73,9 @@ describe("Alfred distribution", () => {
       rmSync(directory, { recursive: true, force: true });
     }
   });
+});
 
+describe("Alfred package configuration", () => {
   onMac("injects top-level trigger configuration into the packaged plist", () => {
     const configuration = JSON.parse(readFileSync(join(root, "workflow.config.json"), "utf8")) as {
       keywords: { dailyNote: string; dailyLog: string; weblink: string };
@@ -83,7 +85,16 @@ describe("Alfred distribution", () => {
         encoding: "utf8"
       })
     ) as {
-      objects: Array<{ type: string; config: { keyword?: string } }>;
+      objects: Array<{
+        uid?: string;
+        type: string;
+        config: {
+          keyword?: string;
+          argumenttype?: number;
+          withspace?: boolean;
+          script?: string;
+        };
+      }>;
     };
     const keywords = plist.objects
       .filter((object) => object.type === "alfred.workflow.input.keyword")
@@ -93,6 +104,18 @@ describe("Alfred distribution", () => {
       configuration.keywords.dailyLog,
       configuration.keywords.weblink
     ]);
+    const weblink = plist.objects.find(
+      (object) =>
+        object.type === "alfred.workflow.input.keyword" &&
+        object.config.keyword === configuration.keywords.weblink
+    );
+    expect(weblink?.config).toMatchObject({
+      argumenttype: 1,
+      withspace: true
+    });
+    expect(plist.objects.find((object) => object.uid === "B3_WEBLINK_CAPTURE")?.config.script).toBe(
+      'osascript -l JavaScript capture.js "$1"'
+    );
   });
 
   onMac("exercises the compiled SOCKS5 curl transport without external runtimes", () => {

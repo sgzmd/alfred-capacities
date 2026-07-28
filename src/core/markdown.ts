@@ -33,6 +33,16 @@ export function normalizeParagraphs(values: unknown, count: number): string {
     .join("\n\n");
 }
 
+export function combineWeblinkBody(suppliedText: string, pageText: string): string {
+  if (!suppliedText) {
+    return pageText;
+  }
+  if (!pageText) {
+    return suppliedText;
+  }
+  return `${suppliedText}\n\n${pageText}`;
+}
+
 export function formatDailyLog(value: string): string {
   const text = value.trim();
   if (!text) {

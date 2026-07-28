@@ -162,15 +162,15 @@
 			<key>config</key>
 			<dict>
 				<key>argumenttype</key>
-				<integer>2</integer>
+				<integer>1</integer>
 				<key>keyword</key>
-				<string>cap:web</string>
+				<string>mdutil</string>
 				<key>subtext</key>
-				<string>Copy the active Chrome page link and save a Weblink asynchronously</string>
+				<string>Optionally add body text, then capture the active Chrome page</string>
 				<key>text</key>
 				<string>Capture Chrome Page to Capacities</string>
 				<key>withspace</key>
-				<false/>
+				<true/>
 			</dict>
 			<key>type</key>
 			<string>alfred.workflow.input.keyword</string>
@@ -233,7 +233,7 @@
 				<key>escaping</key>
 				<integer>102</integer>
 				<key>script</key>
-				<string>osascript -l JavaScript capture.js</string>
+				<string>osascript -l JavaScript capture.js "$1"</string>
 				<key>scriptargtype</key>
 				<integer>1</integer>
 				<key>scriptfile</key>
