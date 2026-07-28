@@ -50,6 +50,31 @@ describe("Alfred distribution", () => {
     ).toBe("ERROR: Missing Weblink job.");
   });
 
+  onMac("injects top-level trigger configuration into the packaged plist", () => {
+    const configuration = JSON.parse(
+      readFileSync(join(root, "workflow.config.json"), "utf8")
+    ) as {
+      keywords: { dailyNote: string; dailyLog: string; weblink: string };
+    };
+    const plist = JSON.parse(
+      execFileSync(
+        "plutil",
+        ["-convert", "json", "-o", "-", join(root, "dist", "info.plist")],
+        { encoding: "utf8" }
+      )
+    ) as {
+      objects: Array<{ type: string; config: { keyword?: string } }>;
+    };
+    const keywords = plist.objects
+      .filter((object) => object.type === "alfred.workflow.input.keyword")
+      .map((object) => object.config.keyword);
+    expect(keywords).toEqual([
+      configuration.keywords.dailyNote,
+      configuration.keywords.dailyLog,
+      configuration.keywords.weblink
+    ]);
+  });
+
   onMac("exercises the compiled SOCKS5 curl transport without external runtimes", () => {
     const cache = mkdtempSync(join(tmpdir(), "alfred-capacities-test-"));
     try {

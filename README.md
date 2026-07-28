@@ -115,6 +115,21 @@ Install dependencies:
 npm ci
 ```
 
+Trigger words are configured in the top-level `workflow.config.json`:
+
+```json
+{
+  "keywords": {
+    "dailyNote": "cap",
+    "dailyLog": "today",
+    "weblink": "cap:web"
+  }
+}
+```
+
+Each trigger must be a unique, non-whitespace Alfred keyword. The build validates
+the configuration and injects it into the packaged `info.plist`.
+
 Run strict type checking, build the JXA bundles, execute all tests, and enforce
 100% core coverage:
 
