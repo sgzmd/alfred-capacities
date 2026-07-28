@@ -10,18 +10,20 @@ describe("URL handling", () => {
     expect(canonicalizeWebUrl("https://user@EXAMPLE.com:444/a")).toBe(
       "https://user@example.com:444/a"
     );
+    expect(canonicalizeWebUrl("https://münich.example/a b")).toBe(
+      "https://xn--mnich-kva.example/a%20b"
+    );
   });
 
   it("handles IPv6 authorities", () => {
     expect(canonicalizeWebUrl("https://[::1]:443/a")).toBe("https://[::1]/a");
     expect(canonicalizeWebUrl("http://[::1]:8080")).toBe("http://[::1]:8080/");
-    expect(() => canonicalizeWebUrl("https://[::1/path")).toThrow("invalid IPv6");
+    expect(() => canonicalizeWebUrl("https://[::1/path")).toThrow("invalid");
   });
 
   it("rejects unsupported or hostless page URLs", () => {
     expect(() => canonicalizeWebUrl("file:///tmp/a")).toThrow("Only HTTP");
-    expect(() => canonicalizeWebUrl("https:///path")).toThrow("missing a host");
-    expect(() => canonicalizeWebUrl("https://example.com/a b")).toThrow("Only HTTP");
+    expect(() => canonicalizeWebUrl("https://example.com:invalid")).toThrow("invalid");
   });
 
   it("validates optional SOCKS5 proxies", () => {

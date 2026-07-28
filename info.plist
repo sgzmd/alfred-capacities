@@ -101,7 +101,7 @@
 				<key>argumenttype</key>
 				<integer>0</integer>
 				<key>keyword</key>
-				<string>__DAILY_NOTE_KEYWORD__</string>
+				<string>cap</string>
 				<key>subtext</key>
 				<string>Type a note to append to today's Daily Note</string>
 				<key>text</key>
@@ -143,7 +143,7 @@
 				<key>argumenttype</key>
 				<integer>0</integer>
 				<key>keyword</key>
-				<string>__DAILY_LOG_KEYWORD__</string>
+				<string>ctlog</string>
 				<key>subtext</key>
 				<string>Append to today's Daily Note with #DailyLog</string>
 				<key>text</key>
@@ -164,7 +164,7 @@
 				<key>argumenttype</key>
 				<integer>2</integer>
 				<key>keyword</key>
-				<string>__WEBLINK_KEYWORD__</string>
+				<string>mdlink</string>
 				<key>subtext</key>
 				<string>Copy the active Chrome page link and save a Weblink asynchronously</string>
 				<key>text</key>

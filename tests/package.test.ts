@@ -7,6 +7,7 @@ import {
 import { execFileSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { buildSync } from "esbuild";
 import { describe, expect, it } from "vitest";
 
 const root = process.cwd();
@@ -48,6 +49,36 @@ describe("Alfred distribution", () => {
         { encoding: "utf8" }
       ).trim()
     ).toBe("ERROR: Missing Weblink job.");
+  });
+
+  onMac("runs bundled standards libraries inside JXA", () => {
+    const directory = mkdtempSync(join(tmpdir(), "alfred-capacities-libraries-"));
+    const output = join(directory, "libraries.js");
+    try {
+      buildSync({
+        entryPoints: [join(root, "tests", "fixtures", "jxa-libraries.ts")],
+        outfile: output,
+        bundle: true,
+        external: ["buffer", "crypto"],
+        platform: "neutral",
+        mainFields: ["module", "main"],
+        format: "iife",
+        globalName: "LibrarySmoke",
+        target: ["es2020"],
+        legalComments: "eof",
+        footer: { js: "function run() { return LibrarySmoke.librarySmokeRun(); }" }
+      });
+      const result = JSON.parse(
+        execFileSync("osascript", ["-l", "JavaScript", output], { encoding: "utf8" })
+      ) as { url: string; markdown: string; hash: string };
+      expect(result).toEqual({
+        url: "https://xn--mnich-kva.example/a%20b",
+        markdown: String.raw`[A \[page\]](https://example.com/a_\(b\))`,
+        hash: "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+      });
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
   });
 
   onMac("injects top-level trigger configuration into the packaged plist", () => {

@@ -1,5 +1,6 @@
 import { build } from "esbuild";
 import { mkdir, rm, copyFile, readFile, writeFile } from "node:fs/promises";
+import { build as buildPlist, parse as parsePlist } from "plist";
 
 const outdir = "dist";
 await rm(outdir, { recursive: true, force: true });
@@ -8,9 +9,9 @@ await mkdir(outdir, { recursive: true });
 const configuration = JSON.parse(await readFile("workflow.config.json", "utf8"));
 const keywords = configuration?.keywords;
 const keywordEntries = [
-  ["__DAILY_NOTE_KEYWORD__", keywords?.dailyNote],
-  ["__DAILY_LOG_KEYWORD__", keywords?.dailyLog],
-  ["__WEBLINK_KEYWORD__", keywords?.weblink]
+  ["A1_KEYWORD", keywords?.dailyNote],
+  ["A3_TODAY", keywords?.dailyLog],
+  ["A4_WEBLINK", keywords?.weblink]
 ];
 
 for (const [name, value] of keywordEntries) {
@@ -23,14 +24,6 @@ const uniqueKeywords = new Set(keywordEntries.map(([, value]) => value));
 if (uniqueKeywords.size !== keywordEntries.length) {
   throw new Error("Alfred trigger keywords must be unique.");
 }
-
-const escapeXml = (value) =>
-  value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&apos;");
 
 const entries = [
   {
@@ -64,22 +57,28 @@ for (const entry of entries) {
     entryPoints: [entry.input],
     outfile: entry.output,
     bundle: true,
+    external: ["buffer", "crypto"],
     platform: "neutral",
+    mainFields: ["module", "main"],
     format: "iife",
     globalName: entry.globalName,
-    target: ["safari14"],
+    target: ["es2020"],
     minify: false,
-    legalComments: "none",
+    legalComments: "eof",
     footer: { js: entry.footer }
   });
 }
 
-let plist = await readFile("info.plist", "utf8");
-for (const [placeholder, value] of keywordEntries) {
-  plist = plist.replaceAll(placeholder, escapeXml(value));
+const plist = parsePlist(await readFile("info.plist", "utf8"));
+if (!plist || typeof plist !== "object" || !Array.isArray(plist.objects)) {
+  throw new Error("info.plist does not contain an Alfred objects array.");
 }
-if (/__[A-Z_]+__/.test(plist)) {
-  throw new Error("Unresolved placeholder found in info.plist.");
+for (const [uid, value] of keywordEntries) {
+  const object = plist.objects.find((candidate) => candidate?.uid === uid);
+  if (!object?.config || typeof object.config !== "object") {
+    throw new Error(`info.plist is missing keyword object ${uid}.`);
+  }
+  object.config.keyword = value;
 }
-await writeFile("dist/info.plist", plist);
+await writeFile("dist/info.plist", buildPlist(plist));
 await copyFile("icon.png", "dist/icon.png");

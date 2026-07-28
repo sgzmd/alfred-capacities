@@ -81,9 +81,8 @@ The Weblink worker:
 
 1. Searches `MediaWebResource` objects using the page URL and title.
 2. Fetches each unique candidate.
-3. Compares its URL with the captured URL after lowercasing the scheme and
-   host, removing default ports and fragments, and preserving the path and
-   query string.
+3. Compares its URL with the captured URL after WHATWG URL parsing and
+   serialization, with fragments removed.
 
 A per-URL local lock prevents simultaneous captures on the same Mac from
 creating duplicates. Capacities does not currently document a create
@@ -95,6 +94,9 @@ an upstream limitation.
 - Uses the Capacities API v1 endpoints and pins API version `0.1.0`.
 - Uses SDK-exported TypeScript contracts during development without shipping
   the SDK runtime.
+- Uses bundled, standards-based URL and Markdown implementations instead of
+  handwritten parsers or escaping rules.
+- Uses SHA-256 URL lock keys and structured plist parsing during the build.
 - Invokes curl using Foundation's `NSTask`, not interpolated shell commands.
 - Stores request configuration, payloads, and asynchronous jobs in restricted
   temporary files and removes them after use.

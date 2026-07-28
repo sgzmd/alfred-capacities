@@ -1,11 +1,23 @@
-export function escapeMarkdownLinkText(value: string): string {
-  return value.replace(/\\/g, "\\\\").replace(/\[/g, "\\[").replace(/\]/g, "\\]");
-}
+import { toMarkdown } from "mdast-util-to-markdown";
+import type { Root } from "mdast";
 
 export function formatMarkdownLink(title: string, url: string): string {
-  const safeTitle = escapeMarkdownLinkText(title.trim() || url);
-  const safeUrl = url.replace(/\\/g, "%5C").replace(/\(/g, "%28").replace(/\)/g, "%29");
-  return `[${safeTitle}](${safeUrl})`;
+  const tree: Root = {
+    type: "root",
+    children: [
+      {
+        type: "paragraph",
+        children: [
+          {
+            type: "link",
+            url,
+            children: [{ type: "text", value: title.trim() || url }]
+          }
+        ]
+      }
+    ]
+  };
+  return toMarkdown(tree, { resourceLink: true }).trimEnd();
 }
 
 export function normalizeParagraphs(values: unknown, count: number): string {

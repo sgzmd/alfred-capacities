@@ -2,6 +2,7 @@ import { CapacitiesApi, CapacitiesError } from "../core/api";
 import { readWorkflowConfig } from "../core/config";
 import { validateWeblinkJob, saveWeblink } from "../core/workflows";
 import { canonicalizeWebUrl } from "../core/url";
+import { sha256Hex } from "../core/hash";
 import {
   createCurlTransport,
   environment,
@@ -13,17 +14,6 @@ import {
   sleep,
   tryAcquireLock
 } from "./jxa";
-
-function hash(value: string): string {
-  let first = 2166136261;
-  let second = 5381;
-  for (let index = 0; index < value.length; index += 1) {
-    const code = value.charCodeAt(index);
-    first = Math.imul(first ^ code, 16777619);
-    second = Math.imul(second, 33) ^ code;
-  }
-  return `${(first >>> 0).toString(16)}${(second >>> 0).toString(16)}`;
-}
 
 function safeMessage(error: unknown, secrets: string[]): string {
   let message =
@@ -53,7 +43,7 @@ export function workerRun(argv: string[]): string {
     proxy = config.proxy || "";
     const job = validateWeblinkJob(JSON.parse(readText(jobPath)) as unknown);
     const cache = env.alfred_workflow_cache || joinPath("/tmp", "cc.kirillov.alfred-capacities");
-    lockPath = joinPath(cache, `lock-${hash(canonicalizeWebUrl(job.url))}`);
+    lockPath = joinPath(cache, `lock-${sha256Hex(canonicalizeWebUrl(job.url))}`);
     if (!tryAcquireLock(lockPath)) {
       notify("Capacities Weblink", "This page is already being checked.", job.title);
       return "Already processing";

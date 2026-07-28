@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import {
-  escapeMarkdownLinkText,
   formatDailyLog,
   formatMarkdownLink,
   normalizeParagraphs
@@ -8,9 +7,8 @@ import {
 
 describe("Markdown helpers", () => {
   it("escapes link labels and destinations", () => {
-    expect(escapeMarkdownLinkText(String.raw`A [useful] \ page`)).toBe(String.raw`A \[useful\] \\ page`);
-    expect(formatMarkdownLink(" A [page] ", String.raw`https://example.com/a_(b)\c`)).toBe(
-      String.raw`[A \[page\]](https://example.com/a_%28b%29%5Cc)`
+    expect(formatMarkdownLink(" A [page] ", "https://example.com/a_(b)")).toBe(
+      String.raw`[A \[page\]](https://example.com/a_\(b\))`
     );
   });
 
