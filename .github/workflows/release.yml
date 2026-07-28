@@ -1,52 +1,98 @@
-name: Release Workflow
+name: Build Release
 
 on:
   push:
     branches:
       - main
+  workflow_dispatch:
+
+concurrency:
+  group: alfred-capacities-release
+  cancel-in-progress: false
+
+permissions:
+  contents: write
 
 jobs:
   release:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
+    runs-on: macos-14
     steps:
-      - name: Checkout Code
+      - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Extract Version
-        id: get_version
-        run: |
-          VERSION=$(python3 -c "import plistlib; print(plistlib.load(open('info.plist', 'rb')).get('version', '1.0.0'))")
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
 
-      - name: Check if Release Exists
-        id: check_tag
+      - name: Read and validate version
+        id: version
+        shell: bash
         run: |
-          if git rev-parse "v${{ env.VERSION }}" >/dev/null 2>&1; then
-            echo "Tag v${{ env.VERSION }} already exists. Skipping release."
-            echo "exists=true" >> $GITHUB_OUTPUT
-          else
-            echo "Tag v${{ env.VERSION }} does not exist. Creating release."
-            echo "exists=false" >> $GITHUB_OUTPUT
+          set -euo pipefail
+          PLIST_VERSION="$(plutil -extract version raw info.plist)"
+          PACKAGE_VERSION="$(node --print "require('./package.json').version")"
+
+          if [[ ! "$PLIST_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+([+-][0-9A-Za-z.-]+)?$ ]]; then
+            echo "info.plist contains an invalid semantic version: $PLIST_VERSION" >&2
+            exit 1
           fi
 
-      - name: Package Workflow
-        if: steps.check_tag.outputs.exists == 'false'
-        run: |
-          chmod +x package.sh
-          ./package.sh
+          if [[ "$PLIST_VERSION" != "$PACKAGE_VERSION" ]]; then
+            echo "Version mismatch: info.plist=$PLIST_VERSION package.json=$PACKAGE_VERSION" >&2
+            exit 1
+          fi
 
-      - name: Create GitHub Release
-        if: steps.check_tag.outputs.exists == 'false'
+          echo "version=$PLIST_VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Check whether version is already released
+        id: tag
+        shell: bash
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          if git rev-parse --verify --quiet "refs/tags/v${VERSION}" >/dev/null; then
+            echo "Version v${VERSION} is already released."
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Building release v${VERSION}."
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install dependencies
+        if: steps.tag.outputs.exists == 'false'
+        run: npm ci
+
+      - name: Build and test
+        if: steps.tag.outputs.exists == 'false'
+        run: npm run check
+
+      - name: Audit dependencies
+        if: steps.tag.outputs.exists == 'false'
+        run: npm audit
+
+      - name: Package workflow
+        if: steps.tag.outputs.exists == 'false'
+        run: npm run package
+
+      - name: Verify release archive
+        if: steps.tag.outputs.exists == 'false'
+        run: |
+          plutil -lint dist/info.plist
+          unzip -t Capacities_Quick_Capture.alfredworkflow
+
+      - name: Create GitHub release
+        if: steps.tag.outputs.exists == 'false'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ env.VERSION }}
-          name: Release v${{ env.VERSION }}
+          tag_name: v${{ steps.version.outputs.version }}
+          target_commitish: ${{ github.sha }}
+          name: Release v${{ steps.version.outputs.version }}
           files: Capacities_Quick_Capture.alfredworkflow
+          fail_on_unmatched_files: true
+          generate_release_notes: true
           draft: false
           prerelease: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

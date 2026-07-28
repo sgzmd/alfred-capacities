@@ -1,57 +1,153 @@
 # Capacities Quick Capture for Alfred
 
-If you use [Capacities](https://capacities.io) for note-taking and [Alfred](https://www.alfredapp.com) for navigating your Mac, you have probably wondered why there isn't a dead-simple, zero-friction way to dump quick thoughts straight into your daily note.
+A dependency-free Alfred workflow for capturing notes, Daily Logs, and browser
+Weblinks in [Capacities](https://capacities.io).
 
-Well, now there is. 
+The installed workflow runs entirely on software included with recent macOS
+versions: JXA, Foundation, and curl. Node.js is needed only when developing or
+packaging the workflow.
 
-This is a lightweight, zero-dependency Alfred workflow designed to let you append text to your Capacities daily note in a fraction of a second. No Electron apps opening, no context switching—just trigger Alfred, type, and get back to what you were doing.
+## Features
 
-## Why this exists
+### Daily Note
 
-Many existing Alfred workflows rely on Python 3 for parsing JSON. While that works fine in theory, Apple stopped shipping Python by default in macOS Monterey. Forcing users to download Xcode Command Line Tools just to parse a bit of JSON seems like an incredibly poor user experience.
+Type `cap <note>` to append Markdown to today's Capacities Daily Note. The
+existing Alfred Universal Action also sends selected text to the Daily Note.
 
-This workflow is written entirely using **JXA (JavaScript for Automation)**. It runs natively on macOS out of the box, with zero external dependencies and zero setup overhead.
+### Daily Log
 
-Additionally, care has been taken to make it secure. Instead of interpolating raw user input directly into shell commands (which is a recipe for JSON breakout and command injection bugs), it serialises the payload natively and handles all escaping before talking to the Capacities API.
+Type `today <entry>` to append the entry to today's Daily Note with
+`#DailyLog`:
+
+```markdown
+<entry> #DailyLog
+```
+
+### Chrome Weblink capture
+
+Type `cap:web` while Google Chrome has an active HTTP or HTTPS page.
+
+The foreground action:
+
+1. Copies only `[page title](https://page-url)` to the clipboard.
+2. Immediately confirms that the link was copied.
+3. Starts a background Capacities job.
+
+The background job:
+
+1. Searches Capacities Weblinks and verifies candidate URLs exactly after
+   conservative normalization.
+2. Reports when the Weblink already exists.
+3. Otherwise creates a Weblink with the page title and the configured number of
+   substantive introductory paragraphs as Markdown notes.
+4. Shows a later success or failure notification.
+
+Chrome must have **View > Developer > Allow JavaScript from Apple Events**
+enabled so the workflow can extract paragraph text. Link capture still reports
+a clear error if Chrome is closed, no tab exists, or the active URL is not HTTP
+or HTTPS.
 
 ## Installation
 
-1. Download the latest release: [Capacities_Quick_Capture.alfredworkflow](Capacities_Quick_Capture.alfredworkflow).
-2. Double-click the file to import it into Alfred.
-3. Configure your **Capacities API Token** in the workflow settings panel. You can generate a token in the Capacities desktop app under **Settings > Capacities API**.
+1. Download `Capacities_Quick_Capture.alfredworkflow` from the latest GitHub
+   release.
+2. Double-click it to import the workflow into Alfred.
+3. In the Capacities desktop app, open **Settings > Capacities API**.
+4. Generate a personal token for the target space with read and write access.
+5. Paste the `cap-api-…` token into the workflow configuration.
 
-## Usage
+Capacities API v1 tokens are bound to one space, so a separate space selector
+is neither needed nor supported.
 
-### 1. Select your active space
-Before sending notes, you need to tell the workflow which space to target. 
+## Configuration
 
-- Trigger Alfred and type `cap:space`.
-- Select your target space from the list. The workflow will persistently save your choice.
+| Setting | Default | Purpose |
+| --- | ---: | --- |
+| Capacities API Token | Required | Space-scoped `cap-api-…` token with read and write access |
+| Weblink Paragraphs | `3` | Substantive paragraphs added to a newly created Weblink, from 0–20 |
+| SOCKS5 Proxy | Empty | Optional `socks5://` or `socks5h://` URL |
+| Connect Timeout | `10` | Connection timeout in seconds |
+| Request Timeout | `45` | Total API request timeout in seconds |
+| Retries | `2` | Retries for transient network, rate-limit, and server errors |
 
-### 2. Capture a note
-- Trigger Alfred and type `cap <your note>`.
-- Press `Enter`.
-- You will receive a system notification confirming the note has been added.
+Prefer `socks5h://` when DNS resolution must also happen through the proxy.
+Proxy credentials can be included in the proxy URL. Tokens and proxy
+credentials are redacted from errors and are never placed directly in curl's
+process arguments.
 
-## Packaging and Development
+## Duplicate handling
 
-If you want to modify the workflow or package it yourself from the source files, there is a simple script to handle it. 
+The Weblink worker:
 
-Alfred workflows are essentially renamed zip archives containing the metadata and scripts. To package the workflow without dragging in macOS metadata clutter (like `.DS_Store` files), run:
+1. Searches `MediaWebResource` objects using the page URL and title.
+2. Fetches each unique candidate.
+3. Compares its URL with the captured URL after lowercasing the scheme and
+   host, removing default ports and fragments, and preserving the path and
+   query string.
+
+A per-URL local lock prevents simultaneous captures on the same Mac from
+creating duplicates. Capacities does not currently document a create
+idempotency key, so truly simultaneous captures from different devices remain
+an upstream limitation.
+
+## Security and reliability
+
+- Uses the Capacities API v1 endpoints and pins API version `0.1.0`.
+- Uses SDK-exported TypeScript contracts during development without shipping
+  the SDK runtime.
+- Invokes curl using Foundation's `NSTask`, not interpolated shell commands.
+- Stores request configuration, payloads, and asynchronous jobs in restricted
+  temporary files and removes them after use.
+- Retries only network errors, HTTP 429, 500, and 503 responses.
+- Respects the Capacities `RateLimit` reset value when supplied.
+- Keeps clipboard success independent from background API success.
+
+## Development
+
+Requirements:
+
+- macOS
+- Node.js 22 or later
+
+Install dependencies:
 
 ```bash
-./package.sh
+npm ci
 ```
 
-This will bundle the necessary files (`info.plist`, `icon.png`, and the JXA scripts) into `Capacities_Quick_Capture.alfredworkflow`.
+Run strict type checking, build the JXA bundles, execute all tests, and enforce
+100% core coverage:
 
-### Automated Releases
+```bash
+npm run check
+```
 
-Releases are fully automated via GitHub Actions. Whenever a pull request is merged into the `main` branch, the release workflow checks if the version number in `info.plist` has been bumped. 
+Create the importable workflow:
 
-If a new version is detected, the workflow automatically:
-1. Packages the workflow files.
-2. Creates a new Git tag (e.g. `v1.0.0`).
-3. Publishes a new GitHub release with the packaged `.alfredworkflow` file attached as an asset.
+```bash
+npm run package
+```
 
-Really, that is all there is to it. Go try it out!
+Build output is written to `dist/`. The final archive contains only:
+
+```text
+info.plist
+icon.png
+daily-note.js
+daily-log.js
+capture.js
+capacities-worker.js
+```
+
+No npm package or JavaScript runtime is required after the workflow is
+installed.
+
+## Release process
+
+Pull requests run the macOS CI workflow, including type checking, 100% core
+coverage, compiled JXA smoke tests, SOCKS5 transport smoke testing, plist
+validation, and archive inspection.
+
+After a version bump is merged into `main`, the release workflow builds and
+tests the project, creates the `.alfredworkflow`, tags the version, and
+publishes the archive as a GitHub release.

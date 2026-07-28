@@ -1,0 +1,22 @@
+{
+  "name": "alfred-capacities",
+  "version": "1.1.0",
+  "private": true,
+  "description": "Dependency-free Alfred workflow for Capacities quick capture",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --coverage",
+    "build": "npm run typecheck && node scripts/build.mjs",
+    "package": "npm run build && bash package.sh",
+    "check": "npm run build && npm test"
+  },
+  "devDependencies": {
+    "@capacities/api": "^0.1.0",
+    "@types/node": "^24.0.0",
+    "@vitest/coverage-v8": "^4.1.10",
+    "esbuild": "^0.25.0",
+    "typescript": "^5.8.0",
+    "vitest": "^4.1.10"
+  }
+}
