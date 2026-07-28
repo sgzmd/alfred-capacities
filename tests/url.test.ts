@@ -28,9 +28,7 @@ describe("URL handling", () => {
 
   it("validates optional SOCKS5 proxies", () => {
     expect(validateSocksProxy("")).toBeUndefined();
-    expect(validateSocksProxy(" SOCKS5H://127.0.0.1:1080/ ")).toBe(
-      "socks5h://127.0.0.1:1080"
-    );
+    expect(validateSocksProxy(" SOCKS5H://127.0.0.1:1080/ ")).toBe("socks5h://127.0.0.1:1080");
     expect(validateSocksProxy("socks5://user:pass@localhost:1080")).toBe(
       "socks5://user:pass@localhost:1080"
     );

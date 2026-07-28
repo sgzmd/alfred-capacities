@@ -45,7 +45,9 @@ describe("Capacities API adapter", () => {
       body: { markdown: "A note" }
     });
   });
+});
 
+describe("Capacities Weblink lookup", () => {
   it("finds a Weblink by exact canonical URL and deduplicates search candidates", () => {
     const requests: HttpRequest[] = [];
     const transport: HttpTransport = (request) => {
@@ -54,7 +56,13 @@ describe("Capacities API adapter", () => {
         return response(
           200,
           JSON.stringify({
-            results: [{ id: "11111111-1111-4111-8111-111111111111", structureId: "MediaWebResource", title: "Page" }]
+            results: [
+              {
+                id: "11111111-1111-4111-8111-111111111111",
+                structureId: "MediaWebResource",
+                title: "Page"
+              }
+            ]
           })
         );
       }
@@ -82,7 +90,13 @@ describe("Capacities API adapter", () => {
           JSON.stringify({
             results:
               calls === 1
-                ? [{ id: "11111111-1111-4111-8111-111111111111", structureId: "MediaWebResource", title: "Other" }]
+                ? [
+                    {
+                      id: "11111111-1111-4111-8111-111111111111",
+                      structureId: "MediaWebResource",
+                      title: "Other"
+                    }
+                  ]
                 : []
           })
         );
@@ -101,7 +115,9 @@ describe("Capacities API adapter", () => {
         })
       );
     };
-    expect(apiWith(transport).api.findWeblink("https://example.com/wanted", "Different title")).toBeUndefined();
+    expect(
+      apiWith(transport).api.findWeblink("https://example.com/wanted", "Different title")
+    ).toBeUndefined();
   });
 
   it("handles an object without a URL", () => {
@@ -110,7 +126,13 @@ describe("Capacities API adapter", () => {
         ? response(
             200,
             JSON.stringify({
-              results: [{ id: "11111111-1111-4111-8111-111111111111", structureId: "MediaWebResource", title: "Page" }]
+              results: [
+                {
+                  id: "11111111-1111-4111-8111-111111111111",
+                  structureId: "MediaWebResource",
+                  title: "Page"
+                }
+              ]
             })
           )
         : response(
@@ -122,9 +144,13 @@ describe("Capacities API adapter", () => {
               properties: {}
             })
           );
-    expect(apiWith(transport).api.findWeblink("https://example.com", "https://example.com")).toBeUndefined();
+    expect(
+      apiWith(transport).api.findWeblink("https://example.com", "https://example.com")
+    ).toBeUndefined();
   });
+});
 
+describe("Capacities creation and retries", () => {
   it("creates Weblinks with and without Markdown", () => {
     const requests: HttpRequest[] = [];
     const transport: HttpTransport = (request) => {
@@ -147,7 +173,9 @@ describe("Capacities API adapter", () => {
   it("retries rate limits using the case-insensitive reset header", () => {
     const transport = vi
       .fn()
-      .mockReturnValueOnce(response(429, '{"code":"cap_rate_limit_exceeded"}', { RateLimit: "limit=5, reset=3" }))
+      .mockReturnValueOnce(
+        response(429, '{"code":"cap_rate_limit_exceeded"}', { RateLimit: "limit=5, reset=3" })
+      )
       .mockReturnValueOnce(response(204));
     const { api, sleep } = apiWith(transport, 1);
     api.appendDailyNote("Retry");
@@ -182,7 +210,9 @@ describe("Capacities API adapter", () => {
     second.api.appendDailyNote("Retry");
     expect(second.sleep).toHaveBeenCalledWith(1000);
   });
+});
 
+describe("Capacities failure handling", () => {
   it("retries network failures and reports the final failure", () => {
     const transport = vi.fn(() => {
       throw new Error("offline");
@@ -214,6 +244,17 @@ describe("Capacities API adapter", () => {
     );
   });
 
+  it("preserves structured transport errors without retrying or wrapping them", () => {
+    const original = new CapacitiesError(401, "cap_auth_failed", "Invalid token");
+    const transport = vi.fn(() => {
+      throw original;
+    });
+    const { api, sleep } = apiWith(transport, 2);
+    expect(() => api.appendDailyNote("No")).toThrow(original);
+    expect(transport).toHaveBeenCalledTimes(1);
+    expect(sleep).not.toHaveBeenCalled();
+  });
+
   it("defensively handles an invalid negative retry configuration", () => {
     expect(() => apiWith(() => response(204), -1).api.appendDailyNote("No")).toThrow(
       "Unknown transport failure"
@@ -222,7 +263,14 @@ describe("Capacities API adapter", () => {
 
   it("throws structured API errors without retrying permanent failures", () => {
     const transport = vi.fn(() =>
-      response(403, JSON.stringify({ code: "cap_scope_insufficient", message: "Missing scope", details: { missingScopes: ["api:write"] } }))
+      response(
+        403,
+        JSON.stringify({
+          code: "cap_scope_insufficient",
+          message: "Missing scope",
+          details: { missingScopes: ["api:write"] }
+        })
+      )
     );
     try {
       apiWith(transport, 2).api.appendDailyNote("No");

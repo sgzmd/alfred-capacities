@@ -1,0 +1,12 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "entry": [
+    "src/runtime/capture.ts",
+    "src/runtime/worker.ts",
+    "src/runtime/daily-note.ts",
+    "tests/fixtures/jxa-libraries.ts",
+    "tests/**/*.test.ts"
+  ],
+  "project": ["src/**/*.ts", "scripts/**/*.mjs", "tests/**/*.ts", "*.ts"],
+  "ignoreBinaries": ["osascript", "plutil"]
+}

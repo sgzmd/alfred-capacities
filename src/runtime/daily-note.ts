@@ -21,10 +21,7 @@ function sendDailyNote(argv: string[], dailyLog: boolean): string {
     return "Note added successfully!";
   } catch (error) {
     const env = environment();
-    const secrets = [
-      env.CAPACITIES_API_TOKEN || "",
-      env.CAPACITIES_SOCKS5_PROXY || ""
-    ];
+    const secrets = [env.CAPACITIES_API_TOKEN || "", env.CAPACITIES_SOCKS5_PROXY || ""];
     let message = error instanceof Error ? error.message : String(error);
     for (const secret of secrets) {
       if (secret) {

@@ -1,5 +1,5 @@
+import { copyFile, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { build } from "esbuild";
-import { mkdir, rm, copyFile, readFile, writeFile } from "node:fs/promises";
 import { build as buildPlist, parse as parsePlist } from "plist";
 
 const outdir = "dist";

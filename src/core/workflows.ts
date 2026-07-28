@@ -1,4 +1,4 @@
-import { CapacitiesApi } from "./api";
+import type { CapacitiesApi } from "./api";
 import type { WeblinkJob, WeblinkResult } from "./types";
 import { canonicalizeWebUrl } from "./url";
 

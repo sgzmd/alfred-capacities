@@ -1,8 +1,8 @@
 import { CapacitiesApi, CapacitiesError } from "../core/api";
 import { readWorkflowConfig } from "../core/config";
-import { validateWeblinkJob, saveWeblink } from "../core/workflows";
-import { canonicalizeWebUrl } from "../core/url";
 import { sha256Hex } from "../core/hash";
+import { canonicalizeWebUrl } from "../core/url";
+import { saveWeblink, validateWeblinkJob } from "../core/workflows";
 import {
   createCurlTransport,
   environment,
@@ -17,7 +17,9 @@ import {
 
 function safeMessage(error: unknown, secrets: string[]): string {
   let message =
-    error instanceof CapacitiesError || error instanceof Error ? error.message : "Unknown Capacities error.";
+    error instanceof CapacitiesError || error instanceof Error
+      ? error.message
+      : "Unknown Capacities error.";
   for (const secret of secrets) {
     if (secret) {
       message = message.split(secret).join("[redacted]");

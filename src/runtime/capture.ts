@@ -1,10 +1,10 @@
 import { readParagraphCount } from "../core/config";
 import { formatMarkdownLink, normalizeParagraphs } from "../core/markdown";
-import { canonicalizeWebUrl } from "../core/url";
 import type { WeblinkJob } from "../core/types";
+import { canonicalizeWebUrl } from "../core/url";
 import {
-  environment,
   ensureDirectory,
+  environment,
   initializeJxa,
   joinPath,
   launchWorker,
@@ -21,7 +21,11 @@ interface CapturedPage {
   paragraphs: unknown;
 }
 
-function captureChromePage(paragraphCount: number): { title: string; url: string; markdown: string } {
+function captureChromePage(paragraphCount: number): {
+  title: string;
+  url: string;
+  markdown: string;
+} {
   const chrome = Application("Google Chrome");
   if (chrome.windows.length === 0) {
     throw new Error("Ensure Chrome is open with an active tab.");
@@ -47,7 +51,11 @@ export function captureRun(): string {
     const clipboard = Application.currentApplication();
     clipboard.includeStandardAdditions = true;
     clipboard.setTheClipboardTo(formatMarkdownLink(page.title, page.url));
-    notify("Page Link Copied", "The Weblink will be saved to Capacities in the background.", page.title);
+    notify(
+      "Page Link Copied",
+      "The Weblink will be saved to Capacities in the background.",
+      page.title
+    );
 
     const cache = env.alfred_workflow_cache || joinPath("/tmp", "cc.kirillov.alfred-capacities");
     ensureDirectory(cache);

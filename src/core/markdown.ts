@@ -1,5 +1,5 @@
-import { toMarkdown } from "mdast-util-to-markdown";
 import type { Root } from "mdast";
+import { toMarkdown } from "mdast-util-to-markdown";
 
 export function formatMarkdownLink(title: string, url: string): string {
   const tree: Root = {

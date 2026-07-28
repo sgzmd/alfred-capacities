@@ -8,9 +8,7 @@ describe("JXA text encoding compatibility", () => {
       TextDecoder: typeof globalThis.TextDecoder;
     };
     installTextEncoding(target);
-    expect(new target.TextEncoder().encode("✓")).toEqual(
-      new Uint8Array([0xe2, 0x9c, 0x93])
-    );
+    expect(new target.TextEncoder().encode("✓")).toEqual(new Uint8Array([0xe2, 0x9c, 0x93]));
     expect(new target.TextDecoder().decode(new Uint8Array([0xe2, 0x9c, 0x93]))).toBe("✓");
   });
 

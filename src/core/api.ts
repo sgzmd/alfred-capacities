@@ -55,11 +55,24 @@ function isRetryableStatus(status: number): boolean {
   return status === 429 || status === 500 || status === 503;
 }
 
+function isSuccessful(response: HttpResponse): boolean {
+  return response.status >= 200 && response.status < 300;
+}
+
+function networkError(error: unknown): CapacitiesError {
+  const message = error instanceof Error ? error.message : String(error);
+  return new CapacitiesError(0, "cap_network_error", `Unable to reach Capacities: ${message}`);
+}
+
 function parseJson<T>(body: string, context: string): T {
   try {
     return JSON.parse(body) as T;
   } catch {
-    throw new CapacitiesError(0, "cap_invalid_response", `Capacities returned invalid JSON for ${context}.`);
+    throw new CapacitiesError(
+      0,
+      "cap_invalid_response",
+      `Capacities returned invalid JSON for ${context}.`
+    );
   }
 }
 
@@ -72,7 +85,9 @@ function errorFromResponse(response: HttpResponse): CapacitiesError {
   }
   const code = typeof body.code === "string" ? body.code : "cap_http_error";
   const message =
-    typeof body.message === "string" ? body.message : `Capacities request failed with HTTP ${response.status}.`;
+    typeof body.message === "string"
+      ? body.message
+      : `Capacities request failed with HTTP ${response.status}.`;
   return new CapacitiesError(response.status, code, message, body.details);
 }
 
@@ -105,30 +120,31 @@ export class CapacitiesApi {
     private readonly options: CapacitiesApiOptions
   ) {}
 
-  private send<T>(request: HttpRequest, context: string, expectsJson = true): T {
-    let lastResponse: HttpResponse | undefined;
-
-    for (let attempt = 0; attempt <= this.options.retries; attempt += 1) {
-      try {
-        const response = this.transport(request);
-        lastResponse = response;
-        if (response.status >= 200 && response.status < 300) {
-          return (expectsJson ? parseJson<T>(response.body, context) : undefined) as T;
-        }
-        if (!isRetryableStatus(response.status) || attempt === this.options.retries) {
-          throw errorFromResponse(response);
-        }
-      } catch (error) {
-        if (error instanceof CapacitiesError) {
-          throw error;
-        }
-        lastResponse = undefined;
-        if (attempt === this.options.retries) {
-          const message = error instanceof Error ? error.message : String(error);
-          throw new CapacitiesError(0, "cap_network_error", `Unable to reach Capacities: ${message}`);
-        }
+  private transportOnce(request: HttpRequest, finalAttempt: boolean): HttpResponse | undefined {
+    try {
+      return this.transport(request);
+    } catch (error) {
+      if (error instanceof CapacitiesError) {
+        throw error;
       }
-      this.options.sleep(retryDelay(lastResponse, attempt));
+      if (finalAttempt) {
+        throw networkError(error);
+      }
+      return undefined;
+    }
+  }
+
+  private send<T>(request: HttpRequest, context: string, expectsJson = true): T {
+    for (let attempt = 0; attempt <= this.options.retries; attempt += 1) {
+      const finalAttempt = attempt === this.options.retries;
+      const response = this.transportOnce(request, finalAttempt);
+      if (response && isSuccessful(response)) {
+        return (expectsJson ? parseJson<T>(response.body, context) : undefined) as T;
+      }
+      if (response && (!isRetryableStatus(response.status) || finalAttempt)) {
+        throw errorFromResponse(response);
+      }
+      this.options.sleep(retryDelay(response, attempt));
     }
 
     throw new CapacitiesError(0, "cap_network_error", "Unknown transport failure");
@@ -145,7 +161,9 @@ export class CapacitiesApi {
 
   findWeblink(url: string, title: string): { id: string; title: string } | undefined {
     const canonical = canonicalizeWebUrl(url);
-    const searches = [url, title].filter((query, index, all) => query && all.indexOf(query) === index);
+    const searches = [url, title].filter(
+      (query, index, all) => query && all.indexOf(query) === index
+    );
     const candidates: Array<{ id: string; title: string }> = [];
 
     for (const query of searches) {

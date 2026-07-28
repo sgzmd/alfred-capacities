@@ -9,7 +9,12 @@ export interface WorkflowConfig {
   retries: number;
 }
 
-function boundedInteger(value: string | undefined, fallback: number, min: number, max: number): number {
+function boundedInteger(
+  value: string | undefined,
+  fallback: number,
+  min: number,
+  max: number
+): number {
   if (value === undefined || value.trim() === "") {
     return fallback;
   }

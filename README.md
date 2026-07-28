@@ -132,12 +132,20 @@ Trigger words are configured in the top-level `workflow.config.json`:
 Each trigger must be a unique, non-whitespace Alfred keyword. The build validates
 the configuration and injects it into the packaged `info.plist`.
 
-Run strict type checking, build the JXA bundles, execute all tests, and enforce
-100% core coverage:
+Run formatting, lint, complexity, dead-code, and dependency checks, then strict
+type checking, build the JXA bundles, execute all tests, and enforce 100% core
+coverage:
 
 ```bash
 npm run check
 ```
+
+The quality gate uses Biome to enforce deterministic formatting, organized
+imports, recommended lint rules, cognitive complexity of at most 15, and
+production functions no longer than 80 non-blank lines. Test-suite callbacks
+have a 120-line limit. Knip rejects unused files, exports, dependencies, and
+unlisted imports. Dynamic `any` types are rejected except inside the JXA runtime
+bridge, whose Objective-C objects have no usable static type definitions.
 
 Create the importable workflow:
 

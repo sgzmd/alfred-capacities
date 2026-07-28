@@ -1,10 +1,5 @@
-import {
-  existsSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync
-} from "node:fs";
 import { execFileSync } from "node:child_process";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { buildSync } from "esbuild";
@@ -43,11 +38,9 @@ describe("Alfred distribution", () => {
       }).trim()
     ).toBe("ERROR: Note content is empty.");
     expect(
-      execFileSync(
-        "osascript",
-        ["-l", "JavaScript", join(root, "dist", "capacities-worker.js")],
-        { encoding: "utf8" }
-      ).trim()
+      execFileSync("osascript", ["-l", "JavaScript", join(root, "dist", "capacities-worker.js")], {
+        encoding: "utf8"
+      }).trim()
     ).toBe("ERROR: Missing Weblink job.");
   });
 
@@ -82,17 +75,13 @@ describe("Alfred distribution", () => {
   });
 
   onMac("injects top-level trigger configuration into the packaged plist", () => {
-    const configuration = JSON.parse(
-      readFileSync(join(root, "workflow.config.json"), "utf8")
-    ) as {
+    const configuration = JSON.parse(readFileSync(join(root, "workflow.config.json"), "utf8")) as {
       keywords: { dailyNote: string; dailyLog: string; weblink: string };
     };
     const plist = JSON.parse(
-      execFileSync(
-        "plutil",
-        ["-convert", "json", "-o", "-", join(root, "dist", "info.plist")],
-        { encoding: "utf8" }
-      )
+      execFileSync("plutil", ["-convert", "json", "-o", "-", join(root, "dist", "info.plist")], {
+        encoding: "utf8"
+      })
     ) as {
       objects: Array<{ type: string; config: { keyword?: string } }>;
     };
