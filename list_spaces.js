@@ -1,10 +1,19 @@
 #!/usr/bin/env osascript -l JavaScript
 
+function logError(msg) {
+    $.NSLog("alfred-capacities ERROR: " + msg);
+}
+
+function logInfo(msg) {
+    $.NSLog("alfred-capacities: " + msg);
+}
+
 function run(argv) {
     const env = $.NSProcessInfo.processInfo.environment;
     const token = env.objectForKey("CAPACITIES_TOKEN")?.js;
 
     if (!token) {
+        logError("Capacities API Token is missing.");
         return JSON.stringify({
             items: [{
                 title: "API Token Missing",
@@ -31,6 +40,7 @@ function run(argv) {
         try {
             data = JSON.parse(responseText);
         } catch (parseError) {
+            logError(`Failed to parse API response: ${responseText}`);
             return JSON.stringify({
                 items: [{
                     title: "API Response Parse Error",
@@ -39,9 +49,10 @@ function run(argv) {
                 }]
             });
         }
-        
+
         if (data.code || data.error) {
             const msg = data.message || responseText;
+            logError(`API error: ${msg}`);
             return JSON.stringify({
                 items: [{
                     title: "API Request Error",
@@ -79,8 +90,10 @@ function run(argv) {
             };
         });
         
+        logInfo(`Fetched ${spaces.length} space(s).`);
         return JSON.stringify({ items });
     } catch (e) {
+        logError(e.message || String(e));
         return JSON.stringify({
             items: [{
                 title: "Error fetching or parsing spaces",

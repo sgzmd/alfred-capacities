@@ -1,9 +1,18 @@
 #!/usr/bin/env osascript -l JavaScript
 
+function logError(msg) {
+    $.NSLog("alfred-capacities ERROR: " + msg);
+}
+
+function logInfo(msg) {
+    $.NSLog("alfred-capacities: " + msg);
+}
+
 function run(argv) {
     const inputText = argv[0];
-    
+
     if (!inputText || inputText.trim() === "") {
+        logError("Note content is empty.");
         return "ERROR: Note content is empty.";
     }
 
@@ -12,10 +21,12 @@ function run(argv) {
     const spaceId = env.objectForKey("CAPACITIES_SPACE_ID")?.js;
 
     if (!token) {
+        logError("Capacities API Token is missing.");
         return "ERROR: Capacities API Token is missing. Please configure it in workflow settings.";
     }
 
     if (!spaceId) {
+        logError("Space ID is not set.");
         return "ERROR: Space ID is not set. Run 'cap:space' in Alfred to select your space first.";
     }
 
@@ -41,6 +52,7 @@ function run(argv) {
         const responseText = app.doShellScript(cmd);
 
         if (!responseText || responseText.trim() === "") {
+            logInfo("Note added successfully.");
             return "Note added successfully!";
         }
 
@@ -48,16 +60,20 @@ function run(argv) {
         try {
             data = JSON.parse(responseText);
         } catch (parseError) {
+            logError(`Failed to parse API response: ${responseText}`);
             return `ERROR: Failed to parse API response: ${responseText}`;
         }
 
         if (data.code || data.error) {
             const errMsg = data.message || responseText;
+            logError(`API error: ${errMsg}`);
             return `ERROR: ${errMsg}`;
         }
 
+        logInfo(`Note added successfully: ${responseText}`);
         return "Note added successfully!";
     } catch (e) {
+        logError(e.message || String(e));
         return `ERROR: ${e.message || String(e)}`;
     }
 }
