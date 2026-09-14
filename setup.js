@@ -1,10 +1,10 @@
 #!/usr/bin/env osascript -l JavaScript
 //
-// cap <note> — creates a tagged Log object and embeds it in today's daily note.
-// Wired: A1_KEYWORD → B1_RUN_SCRIPT → C1_NOTIFICATION.
+// cap:setup — one-time bootstrap. Verifies token, discovers a note-like
+// structure id, finds or creates the DailyLog tag, and persists both ids into
+// workflow configuration.
 
 function run(argv) {
-    // Bootstrap: load shared modules into globalThis.
     (function () {
         ObjC.import('Foundation');
         const dir = scriptDirFallback();
@@ -19,32 +19,23 @@ function run(argv) {
     loadModule('flows.js');
     loadModule('transport/jxa.js');
 
-    const text = (argv[0] || '').trim();
-    if (!text) return 'ERROR: Note content is empty.';
-
     const token = readEnv('CAPACITIES_TOKEN');
-    const structureId = readEnv('CAPACITIES_LOG_STRUCTURE_ID');
     if (!token) return 'ERROR: CAPACITIES_TOKEN missing. Configure it in the workflow settings.';
-    if (!structureId) return 'ERROR: Not set up. Run `cap:setup` in Alfred first.';
 
     const transport = jxaTransport.makeJxaTransport({ token: token });
 
     try {
-        const result = flows.capture(transport, { text: text, structureId: structureId });
-        if (result.embedded) {
-            return 'Note added successfully!';
-        } else {
-            $.NSLog('alfred-capacities: capture warning — ' + (result.warning || 'unknown'));
-            return 'Note saved, but not embedded in daily note (see logs).';
-        }
+        const result = flows.setup(transport);
+        saveConfig('CAPACITIES_LOG_STRUCTURE_ID', result.structureId);
+        saveConfig('CAPACITIES_LOG_STRUCTURE_TITLE', result.structureTitle);
+        saveConfig('CAPACITIES_SPACE_TITLE', result.space.title || '');
+        return `Space ${result.space.title || result.space.id} ready · captures → ${result.structureTitle}`;
     } catch (e) {
         $.NSLog('alfred-capacities ERROR: ' + (e.message || String(e)));
         return 'ERROR: ' + (e.message || String(e));
     }
 }
 
-// Bare-minimum inline duplicate of jxa-bootstrap.scriptDir(), used only to
-// locate jxa-bootstrap.js itself. Once loaded, its own scriptDir() takes over.
 function scriptDirFallback() {
     const argv = $.NSProcessInfo.processInfo.arguments;
     for (let i = 0; i < argv.count; i++) {

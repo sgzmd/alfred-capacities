@@ -5,3 +5,6 @@
 .DS_Store
 
 *env*
+
+# Per-user Claude Code tooling (permission allowlist etc.)
+.claude/settings.local.json
