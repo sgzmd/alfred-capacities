@@ -84,13 +84,13 @@ make e2e
 make clean
 ```
 
-If you have a `.env` file containing `CAPACITIES_TOKEN=...`, `make test`, `make e2e`, and `node scripts/dev.js` will read it automatically.
+If you have a `.env` file containing `CAPACITIES_TOKEN=...`, `make test`, `make e2e`, and `node --experimental-strip-types scripts/dev.ts` will read it automatically.
 
-`scripts/dev.js` is a maintenance CLI for testing and inspecting your space:
+`scripts/dev.ts` is a maintenance CLI for testing and inspecting your space:
 ```bash
-node scripts/dev.js list
-node scripts/dev.js structures
-node scripts/dev.js clean --prefix=e2e-
+node --experimental-strip-types scripts/dev.ts list
+node --experimental-strip-types scripts/dev.ts structures
+node --experimental-strip-types scripts/dev.ts clean --prefix=e2e-
 ```
 
 ## Automated releases

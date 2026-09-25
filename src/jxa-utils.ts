@@ -28,7 +28,9 @@ export function saveConfig(key: string, value: string): void {
             inWorkflow: 'cc.kirillov.alfred-capacities',
         });
     } catch (e: unknown) {
-        nsLog(`Failed to saveConfig ${key}: ${e}`);
+        const msg = e instanceof Error ? e.message : String(e);
+        nsLog(`Failed to saveConfig ${key}: ${msg}`);
+        throw new Error(`Failed to save configuration '${key}' in Alfred: ${msg}`);
     }
 }
 

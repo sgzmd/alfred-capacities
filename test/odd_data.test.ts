@@ -17,7 +17,7 @@ import {
     run,
 } from '../src/runner.ts';
 import { readProperty, capture } from '../src/flows.ts';
-import { formatWhen, alfredError, alfredEmpty } from '../src/jxa-utils.ts';
+import { formatWhen, alfredError, alfredEmpty, saveConfig } from '../src/jxa-utils.ts';
 import { makeMockTransport } from '../src/transport/mock.ts';
 
 test('odd data: Unicode, emojis and multilingual characters', () => {
@@ -198,6 +198,12 @@ test('jxa-utils: alfredError and alfredEmpty generate valid JSON for Alfred', ()
     assert.equal(emptyJson.items.length, 1);
     assert.equal(emptyJson.items[0].title, 'No captures in range');
     assert.equal(emptyJson.items[0].valid, false);
+
+    // saveConfig propagates failure when Alfred is unavailable
+    assert.throws(
+        () => saveConfig('TEST_KEY', 'TEST_VAL'),
+        /Failed to save configuration 'TEST_KEY' in Alfred/,
+    );
 });
 
 test('runner: handles malformed transport responses and parse failures', () => {
