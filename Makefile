@@ -19,7 +19,11 @@ e2e:
 
 check:
 	npm run typecheck
-	plutil -lint info.plist
+	@if command -v plutil >/dev/null 2>&1; then \
+		plutil -lint info.plist; \
+	else \
+		python3 -c "import plistlib; plistlib.load(open('info.plist', 'rb'))"; \
+	fi
 
 package: check test build
 	@rm -f $(WORKFLOW_NAME)
