@@ -1,49 +1,35 @@
 #!/usr/bin/env node
 //
-// scripts/dev.js — maintenance CLI for a Capacities test space. Reuses ops,
+// scripts/dev.ts — maintenance CLI for a Capacities test space. Reuses ops,
 // flows and the Node transport so it stays in lock-step with the workflow.
 //
 // Usage:
-//   node scripts/dev.js list                  # every DailyLog capture
-//   node scripts/dev.js list --prefix=e2e-    # filter by title prefix
-//   node scripts/dev.js clean                 # DELETE all DailyLog captures
-//   node scripts/dev.js clean --prefix=e2e-   # DELETE only e2e leftovers
-//   node scripts/dev.js clean --dry-run       # print what would be deleted
-//   node scripts/dev.js delete <id> [<id>...]
-//   node scripts/dev.js get <id>              # full object JSON
-//   node scripts/dev.js structures            # list structures in space
-//   node scripts/dev.js curl GET /space       # raw request
+//   node scripts/dev.ts list                  # every DailyLog capture
+//   node scripts/dev.ts list --prefix=e2e-    # filter by title prefix
+//   node scripts/dev.ts clean                 # DELETE all DailyLog captures
+//   node scripts/dev.ts clean --prefix=e2e-   # DELETE only e2e leftovers
+//   node scripts/dev.ts clean --dry-run       # print what would be deleted
+//   node scripts/dev.ts delete <id> [<id>...]
+//   node scripts/dev.ts get <id>              # full object JSON
+//   node scripts/dev.ts structures            # list structures in space
+//   node scripts/dev.ts curl GET /space       # raw request
 //
 // Env override: CAPACITIES_LOG_STRUCTURE_ID skips setup's auto-discovery
 // (useful against bare test spaces that don't have a "DailyLog" content type).
-
-import path from 'node:path';
-import fs from 'node:fs';
-import { fileURLToPath } from 'node:url';
 
 import * as flows from '../src/flows.ts';
 import * as ops from '../src/ops.ts';
 import * as runner from '../src/runner.ts';
 import { makeNodeTransport } from '../src/transport/node.ts';
+import { loadEnvToken } from './env.ts';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-
-// Auto-load token from sibling .env if not explicitly set in environment
-if (!process.env.CAPACITIES_TOKEN) {
-    const envFile = path.resolve(__dirname, '..', '.env');
-    if (fs.existsSync(envFile)) {
-        const m = fs.readFileSync(envFile, 'utf8').match(/^CAPACITIES_TOKEN=(.*)$/m);
-        if (m) process.env.CAPACITIES_TOKEN = m[1].trim();
-    }
-}
+const token = loadEnvToken(import.meta.url);
+if (!token) die('CAPACITIES_TOKEN not set.');
 
 const argv = process.argv.slice(2);
 const cmd = argv[0];
 const flags = parseFlags(argv.slice(1));
 const rest = argv.slice(1).filter(a => !a.startsWith('--'));
-
-const token = process.env.CAPACITIES_TOKEN;
-if (!token) die('CAPACITIES_TOKEN not set.');
 const transport = makeNodeTransport({ token });
 
 const commands = {

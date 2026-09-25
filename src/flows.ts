@@ -32,14 +32,14 @@ export function readProperty(
     name: string,
 ): unknown {
     if (!obj || !obj.properties) return undefined;
-    const p = (obj.properties as Record<string, any>)[name];
-    if (!p) return undefined;
-    const pType = typeof p.type === 'string' ? p.type : '';
-    const nested = (p[name] || (pType ? p[pType] : undefined) || p);
-    if (nested && typeof nested === 'object' && 'value' in nested) {
-        return (nested as { value: unknown }).value;
+    const propertyEntry = (obj.properties as Record<string, any>)[name];
+    if (!propertyEntry) return undefined;
+    const propertyType = typeof propertyEntry.type === 'string' ? propertyEntry.type : '';
+    const payload = (propertyEntry[name] || (propertyType ? propertyEntry[propertyType] : undefined) || propertyEntry);
+    if (payload && typeof payload === 'object' && 'value' in payload) {
+        return (payload as { value: unknown }).value;
     }
-    return nested;
+    return payload;
 }
 
 // capture — the cap <note> flow.

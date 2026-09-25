@@ -4,6 +4,7 @@
 //   build(input) → { method, path, body?, query? }
 //   parse(rawText) → any
 
+import removeMarkdown from 'remove-markdown';
 import type {
     Op,
     CapacitiesSpace,
@@ -101,28 +102,18 @@ export function truncateAtWordBoundary(s: string, max: number): string {
 }
 
 export function stripMarkdownInline(s: string): string {
-    let t = String(s);
-    // Images ![alt](url) → alt (must run before plain links)
-    t = t.replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1');
-    // Links [label](url) → label
-    t = t.replace(/\[([^\]]+)\]\([^)]*\)/g, '$1');
-    // Reference-style [label][ref] → label
-    t = t.replace(/\[([^\]]+)\]\[[^\]]*\]/g, '$1');
-    // Inline code `text` → text
-    t = t.replace(/`([^`]+)`/g, '$1');
-    // Bold **text** and __text__ → text
-    t = t.replace(/\*\*([^*]+)\*\*/g, '$1');
-    t = t.replace(/__([^_]+)__/g, '$1');
-    // Italic *text* → text (require the star not to be doubled).
-    t = t.replace(/(?<!\*)\*([^\s*][^*]*?)\*(?!\*)/g, '$1');
-    // Italic _text_ → text ONLY when the underscore is at a word edge —
-    // "foo_bar_baz" and "ESA_Data_Export" must NOT be split.
-    t = t.replace(/(?<![A-Za-z0-9])_([^\s_][^_]*?)_(?![A-Za-z0-9])/g, '$1');
-    // Strikethrough ~~text~~ → text
-    t = t.replace(/~~([^~]+)~~/g, '$1');
-    // Collapse runs of whitespace introduced by removals.
-    t = t.replace(/[ \t]{2,}/g, ' ').trim();
-    return t;
+    let text = String(s || '');
+    if (!text.trim()) return '';
+
+    // Protect single/unclosed strike markers from remove-markdown's global replacement
+    const strikeMatches = text.match(/~~/g);
+    if (strikeMatches && strikeMatches.length % 2 === 1) {
+        const lastIdx = text.lastIndexOf('~~');
+        text = text.slice(0, lastIdx) + '\uE000' + text.slice(lastIdx + 2);
+    }
+
+    const stripped = removeMarkdown(text, { useImgAltText: true });
+    return stripped.replace(/\uE000/g, '~~').replace(/[ \t]{2,}/g, ' ').trim();
 }
 
 export function escapeForH1(s: string): string {

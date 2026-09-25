@@ -1,42 +1,37 @@
 #!/usr/bin/env node
 //
-// scripts/e2e.js — live smoke test against a real Capacities test space.
+// scripts/e2e.ts — live smoke test against a real Capacities test space.
 // Everything is synchronous — same shape as the JXA runtime.
 //
-//   node scripts/e2e.js
-//   node scripts/e2e.js --keep          # skip cleanup
-//   node scripts/e2e.js --only=seed     # subset: bootstrap, seed
-//   node scripts/e2e.js --only=retrieve # subset: bootstrap, seed, retrieve
+//   node scripts/e2e.ts
+//   node scripts/e2e.ts --keep          # skip cleanup
+//   node scripts/e2e.ts --only=seed     # subset: bootstrap, seed
+//   node scripts/e2e.ts --only=retrieve # subset: bootstrap, seed, retrieve
 
-import path from 'node:path';
-import fs from 'node:fs';
 import { execFileSync } from 'node:child_process';
-import { fileURLToPath } from 'node:url';
 
 import * as flows from '../src/flows.ts';
 import { makeNodeTransport } from '../src/transport/node.ts';
+import { loadEnvToken } from './env.ts';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-
-// Auto-load token from sibling .env if not explicitly set in environment
-if (!process.env.CAPACITIES_TOKEN) {
-    const envFile = path.resolve(__dirname, '..', '.env');
-    if (fs.existsSync(envFile)) {
-        const m = fs.readFileSync(envFile, 'utf8').match(/^CAPACITIES_TOKEN=(.*)$/m);
-        if (m) process.env.CAPACITIES_TOKEN = m[1].trim();
-    }
-}
+// Timing constants to ensure robust live execution without triggering rate limits
+const SEED_RECORD_COUNT = 3;
+const INITIAL_SEED_DELAY_MS = 2000;
+const INTER_SEED_DELAY_MS = 1200;
+const STAGE_COOLDOWN_MS = 2000;
+const WIDE_WINDOW_LOOKBACK_MS = 60 * 60 * 1000; // 1 hour
+const NARROW_WINDOW_LOOKBACK_MS = 1000; // 1 second
+const DAILY_NOTE_MARGIN_DAYS = 1;
 
 const args = parseArgs(process.argv.slice(2));
 const KEEP = args.keep === true;
 const ONLY = args.only;
 
-const token = process.env.CAPACITIES_TOKEN;
+const token = loadEnvToken(import.meta.url);
 if (!token) fail('CAPACITIES_TOKEN not set (use a dedicated test-space token or .env).');
 
 const transport = makeNodeTransport({ token });
 const runId = randomId(6);
-const N = 3;
 const seeded: Array<{ id: string; text: string }> = [];
 
 try {
@@ -52,11 +47,11 @@ try {
     stage('seed', () => seedRecords(bootstrap.structureId));
 
     if (ONLY === 'seed') doneOk();
-    sleepSync(2000);
+    sleepSync(STAGE_COOLDOWN_MS);
     stage('retrieve', () => verifyRetrieval(bootstrap.structureId));
 
     if (ONLY === 'retrieve') doneOk();
-    sleepSync(2000);
+    sleepSync(STAGE_COOLDOWN_MS);
     stage('daily-note-check', () => verifyDailyNote());
 
     if (KEEP) {
@@ -76,10 +71,10 @@ try {
 function seedRecords(structureId: string) {
     const first = captureOne(0, structureId);
     seeded.push(first);
-    sleepSync(2000);
-    for (let i = 1; i < N; i++) {
+    sleepSync(INITIAL_SEED_DELAY_MS);
+    for (let i = 1; i < SEED_RECORD_COUNT; i++) {
         seeded.push(captureOne(i, structureId));
-        sleepSync(1200);
+        sleepSync(INTER_SEED_DELAY_MS);
     }
     console.log(`  seeded ${seeded.length} records (runId=${runId})`);
 }
@@ -93,24 +88,28 @@ function captureOne(i: number, structureId: string) {
 
 function verifyRetrieval(structureId: string) {
     const now = new Date();
-    const oneHourAgo = new Date(now.getTime() - 3600 * 1000);
-    const wide = flows.listInRange(transport, { structureId, from: oneHourAgo, to: now });
+    const wideWindowStart = new Date(now.getTime() - WIDE_WINDOW_LOOKBACK_MS);
+    const wide = flows.listInRange(transport, { structureId, from: wideWindowStart, to: now });
     const byId = new Map(wide.map(o => [o.id, o]));
 
     for (const s of seeded) {
         if (!byId.has(s.id)) throw new Error(`wide window (1h) missing seeded id ${s.id}`);
     }
-    console.log(`  wide window (1h): all ${N} seeded records present ✓`);
+    console.log(`  wide window (1h): all ${SEED_RECORD_COUNT} seeded records present ✓`);
 
-    const oneSecAgo = now.getTime() - 1000;
-    const narrow = wide.filter(o => {
-        const t = o.createdAt ? new Date(o.createdAt).getTime() : 0;
-        return t >= oneSecAgo;
+    // Verify narrow window exclusion:
+    // Only records created in the last NARROW_WINDOW_LOOKBACK_MS (1 second) before `now` are included.
+    // Because seed[0] was created at least INITIAL_SEED_DELAY_MS (2s) ago, it must be excluded.
+    const narrowCutoffMs = now.getTime() - NARROW_WINDOW_LOOKBACK_MS;
+    const narrow = wide.filter(record => {
+        const createdAtMs = record.createdAt ? new Date(record.createdAt).getTime() : 0;
+        return createdAtMs >= narrowCutoffMs;
     });
-    if (narrow.some(o => o.id === seeded[0].id)) {
-        throw new Error('narrow window unexpectedly includes the first (older) seed');
+    const firstSeededId = seeded[0].id;
+    if (narrow.some(record => record.id === firstSeededId)) {
+        throw new Error(`narrow window unexpectedly includes the older initial seed (${firstSeededId})`);
     }
-    console.log(`  narrow window (1s): ${narrow.length} results, first-seed excluded ✓`);
+    console.log(`  narrow window (1s): ${narrow.length} results, initial seed correctly excluded ✓`);
 
     for (const s of seeded) {
         const o = byId.get(s.id);
@@ -121,7 +120,7 @@ function verifyRetrieval(structureId: string) {
 }
 
 function verifyDailyNote() {
-    const notes = flows.getDailyNotes(transport, { marginDays: 1 });
+    const notes = flows.getDailyNotes(transport, { marginDays: DAILY_NOTE_MARGIN_DAYS });
     if (notes.length === 0) throw new Error('no daily notes found in the search window');
     const referenced = new Set<string>();
     for (const note of notes) {
