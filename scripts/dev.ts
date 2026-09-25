@@ -4,26 +4,38 @@
 // flows and the Node transport so it stays in lock-step with the workflow.
 //
 // Usage:
-//   CAPACITIES_TOKEN=… node scripts/dev.js list                  # every DailyLog capture
-//   CAPACITIES_TOKEN=… node scripts/dev.js list --prefix=e2e-    # filter by title prefix
-//   CAPACITIES_TOKEN=… node scripts/dev.js clean                 # DELETE all DailyLog captures
-//   CAPACITIES_TOKEN=… node scripts/dev.js clean --prefix=e2e-   # DELETE only e2e leftovers
-//   CAPACITIES_TOKEN=… node scripts/dev.js clean --dry-run       # print what would be deleted
-//   CAPACITIES_TOKEN=… node scripts/dev.js delete <id> [<id>...]
-//   CAPACITIES_TOKEN=… node scripts/dev.js get <id>              # full object JSON
-//   CAPACITIES_TOKEN=… node scripts/dev.js structures            # list structures in space
-//   CAPACITIES_TOKEN=… node scripts/dev.js curl GET /space       # raw request
+//   node scripts/dev.js list                  # every DailyLog capture
+//   node scripts/dev.js list --prefix=e2e-    # filter by title prefix
+//   node scripts/dev.js clean                 # DELETE all DailyLog captures
+//   node scripts/dev.js clean --prefix=e2e-   # DELETE only e2e leftovers
+//   node scripts/dev.js clean --dry-run       # print what would be deleted
+//   node scripts/dev.js delete <id> [<id>...]
+//   node scripts/dev.js get <id>              # full object JSON
+//   node scripts/dev.js structures            # list structures in space
+//   node scripts/dev.js curl GET /space       # raw request
 //
 // Env override: CAPACITIES_LOG_STRUCTURE_ID skips setup's auto-discovery
 // (useful against bare test spaces that don't have a "DailyLog" content type).
 
-'use strict';
+import path from 'node:path';
+import fs from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
-const path = require('node:path');
-const flows = require(path.resolve(__dirname, '..', 'flows.js'));
-const ops = require(path.resolve(__dirname, '..', 'ops.js'));
-const runner = require(path.resolve(__dirname, '..', 'runner.js'));
-const { makeNodeTransport } = require(path.resolve(__dirname, '..', 'transport', 'node.js'));
+import * as flows from '../src/flows.ts';
+import * as ops from '../src/ops.ts';
+import * as runner from '../src/runner.ts';
+import { makeNodeTransport } from '../src/transport/node.ts';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+// Auto-load token from sibling .env if not explicitly set in environment
+if (!process.env.CAPACITIES_TOKEN) {
+    const envFile = path.resolve(__dirname, '..', '.env');
+    if (fs.existsSync(envFile)) {
+        const m = fs.readFileSync(envFile, 'utf8').match(/^CAPACITIES_TOKEN=(.*)$/m);
+        if (m) process.env.CAPACITIES_TOKEN = m[1].trim();
+    }
+}
 
 const argv = process.argv.slice(2);
 const cmd = argv[0];
@@ -44,15 +56,15 @@ const commands = {
     help: printHelp,
 };
 
-if (!cmd || !commands[cmd]) {
+if (!cmd || !(cmd in commands)) {
     if (cmd) console.error(`unknown command: ${cmd}\n`);
     printHelp();
     process.exit(cmd ? 1 : 0);
 }
 
 try {
-    commands[cmd]();
-} catch (e) {
+    commands[cmd as keyof typeof commands]();
+} catch (e: any) {
     die(e.stack || e.message || String(e));
 }
 
@@ -79,7 +91,7 @@ function cleanCaptures() {
             runner.run(ops.DeleteObject, { id: o.id }, transport);
             process.stdout.write('.');
             ok++;
-        } catch (e) {
+        } catch (e: any) {
             process.stdout.write('x');
             fail++;
             console.error(`\n  ${o.id}: ${e.message}`);
@@ -94,7 +106,7 @@ function deleteById() {
         try {
             runner.run(ops.DeleteObject, { id }, transport);
             console.log(`${id} → deleted`);
-        } catch (e) {
+        } catch (e: any) {
             console.log(`${id} → ${e.message}`);
         }
     }
@@ -108,17 +120,16 @@ function getObject() {
 
 function listStructures() {
     const resp = runner.run(ops.ListStructures, {}, transport);
-    const list = (resp && (resp.structures || resp)) || [];
+    const list = resp?.structures || [];
     for (const s of list) console.log(`${(s.id || '').padEnd(24)}  ${s.title || ''}`);
 }
 
 function rawRequest() {
-    // scripts/dev.js curl METHOD PATH [json-body]
-    const method = rest[0];
+    const method = rest[0] as any;
     const p = rest[1];
     const body = rest[2];
     if (!method || !p) die('curl: usage: curl METHOD /path [json-body]');
-    const req = { method, path: p };
+    const req: any = { method, path: p };
     if (body) req.body = JSON.parse(body);
     const res = transport(req);
     console.log(`HTTP ${res.status}`);
@@ -128,7 +139,6 @@ function rawRequest() {
 // ---------- helpers ----------
 
 function fetchCaptures() {
-    // Bootstrap to discover the log structure id (idempotent), then list + hydrate.
     const forceStructureId = process.env.CAPACITIES_LOG_STRUCTURE_ID || undefined;
     const { structureId } = flows.setup(transport, {
         forceStructureId: forceStructureId,
@@ -142,8 +152,8 @@ function fetchCaptures() {
     return prefix ? wide.filter(o => (o.title || '').startsWith(prefix)) : wide;
 }
 
-function parseFlags(args) {
-    const out = {};
+function parseFlags(args: string[]) {
+    const out: Record<string, any> = {};
     for (const a of args) {
         if (!a.startsWith('--')) continue;
         const eq = a.indexOf('=');
@@ -153,19 +163,19 @@ function parseFlags(args) {
     return out;
 }
 
-function die(msg) {
+function die(msg: string): never {
     console.error(`\x1b[31m${msg}\x1b[0m`);
     process.exit(1);
 }
 
 function printHelp() {
     console.log(`
-Maintenance CLI for the alfred-capacities test space.
-All commands require CAPACITIES_TOKEN.
+Maintenance CLI for the alfred-capacities space.
+Requires CAPACITIES_TOKEN (read automatically from .env if present).
 
-  list                       every DailyLog-tagged object, sorted newest first
+  list                       every DailyLog object, sorted newest first
   list --prefix=STR          only titles starting with STR
-  clean                      DELETE every DailyLog-tagged object
+  clean                      DELETE every DailyLog object
   clean --prefix=e2e-        DELETE only the e2e leftovers
   clean --dry-run            print what would be deleted
   delete <id> [<id>...]      DELETE these ids

@@ -1,10 +1,9 @@
-// test/range.test.js — parseRangeExpression + filterByDate.
-'use strict';
+// test/range.test.ts — parseRangeExpression + filterByDate.
 
-const test = require('node:test');
-const assert = require('node:assert/strict');
+import test from 'node:test';
+import assert from 'node:assert/strict';
 
-const { parseRangeExpression, filterByDate } = require('../runner.js');
+import { parseRangeExpression, filterByDate } from '../src/runner.ts';
 
 const NOW = new Date('2026-09-13T12:00:00Z');
 
@@ -12,7 +11,7 @@ test('parseRangeExpression: empty and "week" both mean last 7 days', () => {
     for (const input of ['', undefined, null, 'week', 'WEEK', ' week ']) {
         const r = parseRangeExpression(input, NOW);
         assert.equal(r.to.toISOString(), NOW.toISOString());
-        const diffDays = Math.round((r.to - r.from) / 86400000);
+        const diffDays = Math.round((r.to.getTime() - r.from.getTime()) / 86400000);
         assert.equal(diffDays, 7, `expected 7-day window for ${JSON.stringify(input)}`);
     }
 });
@@ -25,7 +24,7 @@ test('parseRangeExpression: "today" is midnight-UTC to now', () => {
 
 test('parseRangeExpression: numeric N', () => {
     const r = parseRangeExpression('3', NOW);
-    const diffDays = Math.round((r.to - r.from) / 86400000);
+    const diffDays = Math.round((r.to.getTime() - r.from.getTime()) / 86400000);
     assert.equal(diffDays, 3);
 });
 
@@ -36,7 +35,7 @@ test('parseRangeExpression: ISO range is inclusive on both ends (end + 1d exclus
 });
 
 test('parseRangeExpression: rejects garbage', () => {
-    for (const bad of ['xyz', '0', '-1', '9999', '2026-09-01..2026-08-01']) {
+    for (const bad of ['xyz', '0', '-1', '9999', '2026-09-01..2026-08-01', '2026-02-31..2026-03-01']) {
         assert.throws(() => parseRangeExpression(bad, NOW), new RegExp('range'));
     }
 });
@@ -58,6 +57,6 @@ test('filterByDate: from-inclusive, to-exclusive; sorts newest first; ignores ba
 });
 
 test('filterByDate: handles null/undefined input gracefully', () => {
-    assert.deepEqual(filterByDate(null, { from: new Date(0), to: new Date(1e13) }), []);
-    assert.deepEqual(filterByDate(undefined, { from: new Date(0), to: new Date(1e13) }), []);
+    assert.deepEqual(filterByDate(null as any, { from: new Date(0), to: new Date(1e13) }), []);
+    assert.deepEqual(filterByDate(undefined as any, { from: new Date(0), to: new Date(1e13) }), []);
 });

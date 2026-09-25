@@ -42,33 +42,56 @@ Alfred lists matching captures newest‑first; pressing Enter opens the object i
 
 ## How it works
 
-Three small pure files plus a swappable transport:
+Written in TypeScript in `src/` and bundled with `esbuild` into self-contained JXA scripts for Alfred:
 
 | File | What it holds |
 |---|---|
-| `ops.js` | one object per Capacities endpoint — `build(input)` and `parse(text)`. |
-| `runner.js` | `run(op, input, transport)`, `parseRangeExpression`, `filterByDate`. |
-| `flows.js` | named compositions: `capture`, `setup`, `listInRange`. |
-| `transport/jxa.js` | `NSURLSession`‑backed HTTP for the Alfred runtime. |
-| `transport/fetch.js` | Node `fetch`‑backed transport, used by `scripts/e2e.js`. |
-| `transport/mock.js` | fixture transport, used by every unit test. |
+| `src/types.ts` | Strongly typed Capacities v1 API payloads, structures, and flow contracts. |
+| `src/ops.ts` | One object per Capacities endpoint — `build(input)` and `parse(text)`. |
+| `src/runner.ts` | Synchronous `run(op, input, transport)`, `parseRangeExpression`, `filterByDate`. |
+| `src/flows.ts` | Named compositions: `capture`, `setup`, `listInRange`, `getDailyNotes`. |
+| `src/transport/jxa.ts` | Synchronous `NSTask` + curl transport for the Alfred JXA runtime. |
+| `src/transport/node.ts` | Synchronous `execFileSync('curl')` transport for test and dev tooling. |
+| `src/transport/mock.ts` | Synchronous fixture transport used by unit tests. |
+| `src/entries/` | Alfred entrypoints (`capture.ts`, `setup.ts`, `log.ts`), bundled into standalone scripts in `dist/`. |
 
-The three JXA entry scripts (`send_to_daily_note.js`, `setup.js`, `log.js`) each read Alfred's input, build a `jxaTransport`, and call one flow. That's the whole shape.
+The bundled entry scripts are completely self-contained with zero runtime `eval()` and zero external dependencies.
 
 ## Development
 
+A simple `Makefile` manages building, testing, linting, and packaging:
+
 ```bash
-# Unit tests (36 currently)
-node --test 'test/*.test.js'
+# Run unit tests (64 tests across ops, flows, range, transport, and odd data)
+make test
 
-# Live smoke test against a real test space
-CAPACITIES_TOKEN=<test-space token> node scripts/e2e.js
+# Run tests with code coverage report (>93% line coverage)
+make coverage
 
-# Package the .alfredworkflow (also runs tests, and e2e if CAPACITIES_TOKEN is set)
-./package.sh
+# Typecheck and lint plist
+make check
+
+# Build bundled JXA scripts into dist/
+make build
+
+# Package the .alfredworkflow (runs check, test, build, and zips)
+make package
+
+# Live smoke test against a real space (auto-reads CAPACITIES_TOKEN from .env)
+make e2e
+
+# Clean build artifacts
+make clean
 ```
 
-`scripts/e2e.js` seeds ten records, retrieves them by tag with two different windows to check date filtering, verifies each was embedded in today's daily note, and deletes everything. Use `--keep` to skip cleanup.
+If you have a `.env` file containing `CAPACITIES_TOKEN=...`, `make test`, `make e2e`, and `node scripts/dev.js` will read it automatically.
+
+`scripts/dev.js` is a maintenance CLI for testing and inspecting your space:
+```bash
+node scripts/dev.js list
+node scripts/dev.js structures
+node scripts/dev.js clean --prefix=e2e-
+```
 
 ## Automated releases
 

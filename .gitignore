@@ -1,10 +1,18 @@
-# Alfred Release Builds
+# Secrets and environment
+.env
+.env.*
+*.env
+
+# Alfred workflow build outputs
 *.alfredworkflow
 
-# macOS System Files
+# Node and build outputs
+node_modules/
+dist/
+coverage/
+
+# macOS system files
 .DS_Store
 
-*env*
-
-# Per-user Claude Code tooling (permission allowlist etc.)
+# Tooling
 .claude/settings.local.json

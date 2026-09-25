@@ -59,32 +59,35 @@ If you catch yourself typing `async`, stop. You'll break the JXA runtime and eve
 ## File layout
 
 ```
-runner.js               run(op, input, transport), ApiError,
+src/types.ts            Capacities v1 API models & flow contracts
+src/runner.ts           run(op, input, transport), ApiError,
                         parseRangeExpression, filterByDate
-ops.js                  one plain object per API endpoint
-flows.js                capture, setup, listInRange,
+src/ops.ts              one plain object per API endpoint
+src/flows.ts            capture, setup, listInRange,
                         getDailyNote / getDailyNotes, deleteObject,
                         findLogStructure, readProperty,
                         DEFAULT_LOG_TITLES
-transport/jxa.js        JXA transport: NSTask + /usr/bin/curl
-transport/node.js       Node transport: execFileSync('curl', …)
-transport/mock.js       fixture-driven transport for tests
+src/transport/jxa.ts    JXA transport: NSTask + /usr/bin/curl
+src/transport/node.ts   Node transport: execFileSync('curl', …)
+src/transport/mock.ts   fixture-driven transport for tests
+src/jxa-utils.ts        JXA helpers: readEnv, saveConfig, formatWhen, alfredError
+src/entries/capture.ts  `cap <note>` — capture entry (bundles to dist/send_to_daily_note.js)
+src/entries/setup.ts    `cap:setup` — bootstrap entry (bundles to dist/setup.js)
+src/entries/log.ts      `cap:log <range>` — Alfred script filter (bundles to dist/log.js)
 
-jxa-bootstrap.js        loadModule(), readEnv(), scriptDir(), saveConfig()
-send_to_daily_note.js   `cap <note>` — capture flow
-setup.js                `cap:setup` — bootstrap flow
-log.js                  `cap:log <range>` — Alfred script filter
+scripts/build.mjs       esbuild bundler producing self-contained JXA scripts
+scripts/e2e.js          live smoke test against a real space (auto-reads .env)
+scripts/dev.js          maintenance CLI: list / clean / delete / get / … (auto-reads .env)
 
-scripts/e2e.js          live smoke test against a real space
-scripts/dev.js          maintenance CLI: list / clean / delete / get / …
+test/ops.test.ts        every op's build/parse
+test/transport.test.ts  makeNodeTransport headers/body/query + mock
+test/flows.test.ts      capture/setup/listInRange via mockTransport
+test/range.test.ts      parseRangeExpression + filterByDate
+test/odd_data.test.ts   Unicode, emojis, shell-hostile strings, massive inputs
 
-test/ops.test.js        every op's build/parse
-test/transport.test.js  makeNodeTransport headers/body/query + mock
-test/flows.test.js      capture/setup/listInRange via mockTransport
-test/range.test.js      parseRangeExpression + filterByDate
-
+Makefile                build, test, coverage, e2e, check, package, clean
 info.plist              Alfred workflow — 3 keywords, 3 config vars
-package.sh              node --test + optional e2e + zip
+package.sh              wrapper invoking make package
 .github/workflows/      test.yml (push/PR) + release.yml (main → tag)
 ```
 
