@@ -1,24 +1,18 @@
-// test/transport.test.js — the Node transport wraps requests correctly.
-'use strict';
+// test/transport.test.ts — the Node transport wraps requests correctly.
 
-const test = require('node:test');
-const assert = require('node:assert/strict');
-const path = require('node:path');
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import path from 'node:path';
+import os from 'node:os';
+import fs from 'node:fs';
 
-const { makeNodeTransport, API_VERSION } = require('../transport/node.js');
-const { makeMockTransport } = require('../transport/mock.js');
+import { makeNodeTransport, API_VERSION } from '../src/transport/node.ts';
+import { makeMockTransport } from '../src/transport/mock.ts';
 
-// Build a shim curl on PATH that echoes stdin/argv back so we can inspect the
-// request without hitting the network.
-const os = require('node:os');
-const fs = require('node:fs');
-
-function withShimmedCurl(fn) {
-    return (t) => {
+function withShimmedCurl(fn: (t: any, readArgs: () => string[]) => void) {
+    return (t: any) => {
         const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'curl-shim-'));
         const shim = path.join(dir, 'curl');
-        // The shim writes argv to a sidecar file and prints a canned body + a
-        // status suffix matching the format nodeTransport parses.
         fs.writeFileSync(shim, [
             '#!/usr/bin/env node',
             'const fs = require("fs");',
@@ -41,7 +35,7 @@ function withShimmedCurl(fn) {
 }
 
 test('makeNodeTransport: token required', () => {
-    assert.throws(() => makeNodeTransport({}));
+    assert.throws(() => makeNodeTransport({ token: '' }));
 });
 
 test('makeNodeTransport: attaches bearer + version + accept headers', withShimmedCurl((t, readArgs) => {
@@ -96,7 +90,7 @@ test('makeMockTransport: records calls and returns fixtures by "METHOD path"', (
 
 test('makeMockTransport: throws on missing fixture by default', () => {
     const t = makeMockTransport({});
-    assert.throws(() => t({ method: 'GET', path: '/unknown' }), /no fixture/);
+    assert.throws(() => t({ method: 'GET', path: '/unknown' }), /unhandled request/);
 });
 
 test('makeMockTransport: fixture may be a function taking (req, callIndex)', () => {

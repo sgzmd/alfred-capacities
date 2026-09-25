@@ -59,32 +59,36 @@ If you catch yourself typing `async`, stop. You'll break the JXA runtime and eve
 ## File layout
 
 ```
-runner.js               run(op, input, transport), ApiError,
+src/types.ts            Capacities v1 API models & flow contracts
+src/runner.ts           run(op, input, transport), ApiError,
                         parseRangeExpression, filterByDate
-ops.js                  one plain object per API endpoint
-flows.js                capture, setup, listInRange,
+src/ops.ts              one plain object per API endpoint
+src/flows.ts            capture, setup, listInRange,
                         getDailyNote / getDailyNotes, deleteObject,
                         findLogStructure, readProperty,
                         DEFAULT_LOG_TITLES
-transport/jxa.js        JXA transport: NSTask + /usr/bin/curl
-transport/node.js       Node transport: execFileSync('curl', …)
-transport/mock.js       fixture-driven transport for tests
+src/transport/jxa.ts    JXA transport: NSTask + /usr/bin/curl
+src/transport/node.ts   Node transport: execFileSync('curl', …)
+src/transport/mock.ts   fixture-driven transport for tests
+src/jxa-utils.ts        JXA helpers: readEnv, saveConfig, formatWhen, alfredError
+src/entries/capture.ts  `cap <note>` — capture entry (bundles to dist/send_to_daily_note.js)
+src/entries/setup.ts    `cap:setup` — bootstrap entry (bundles to dist/setup.js)
+src/entries/log.ts      `cap:log <range>` — Alfred script filter (bundles to dist/log.js)
 
-jxa-bootstrap.js        loadModule(), readEnv(), scriptDir(), saveConfig()
-send_to_daily_note.js   `cap <note>` — capture flow
-setup.js                `cap:setup` — bootstrap flow
-log.js                  `cap:log <range>` — Alfred script filter
+scripts/build.mjs       esbuild bundler producing self-contained JXA scripts
+scripts/e2e.ts          live smoke test against a real space (auto-reads .env)
+scripts/dev.ts          maintenance CLI: list / clean / delete / get / … (auto-reads .env)
+scripts/env.ts          shared environment token loader
 
-scripts/e2e.js          live smoke test against a real space
-scripts/dev.js          maintenance CLI: list / clean / delete / get / …
+test/ops.test.ts        every op's build/parse
+test/transport.test.ts  makeNodeTransport headers/body/query + mock
+test/flows.test.ts      capture/setup/listInRange via mockTransport
+test/range.test.ts      parseRangeExpression + filterByDate
+test/odd_data.test.ts   Unicode, emojis, shell-hostile strings, massive inputs
 
-test/ops.test.js        every op's build/parse
-test/transport.test.js  makeNodeTransport headers/body/query + mock
-test/flows.test.js      capture/setup/listInRange via mockTransport
-test/range.test.js      parseRangeExpression + filterByDate
-
+Makefile                build, test, coverage, e2e, check, package, clean
 info.plist              Alfred workflow — 3 keywords, 3 config vars
-package.sh              node --test + optional e2e + zip
+package.sh              wrapper invoking make package
 .github/workflows/      test.yml (push/PR) + release.yml (main → tag)
 ```
 
@@ -179,35 +183,35 @@ Every one of these was found by test.
 All commands assume repo root as cwd. `CAPACITIES_TOKEN` must be a space‑scoped v1 token from Capacities → Settings → Capacities API.
 
 ```bash
-# 41 unit tests, no network.
-node --test 'test/*.test.js'
+# 64 unit and desktop edge-case tests, no network.
+make test
+# Or natively with npm:
+npm test
 
 # Live smoke test. Bootstrap → seed 3 records → retrieve → verify daily-note
-# embeds → cleanup. --keep skips cleanup. Takes ~12 s green.
-CAPACITIES_TOKEN=… node scripts/e2e.js
+# embeds → cleanup. --keep skips cleanup.
+make e2e
 
 # Maintenance CLI. Same transport/ops/flows as the workflow, so drift is
 # impossible.
-CAPACITIES_TOKEN=… node scripts/dev.js help
-CAPACITIES_TOKEN=… node scripts/dev.js list                     # every DailyLog capture
-CAPACITIES_TOKEN=… node scripts/dev.js list --prefix=e2e-       # filter by title
-CAPACITIES_TOKEN=… node scripts/dev.js clean --prefix=e2e-      # delete e2e leftovers
-CAPACITIES_TOKEN=… node scripts/dev.js clean --dry-run          # preview
-CAPACITIES_TOKEN=… node scripts/dev.js delete <id> [<id>...]
-CAPACITIES_TOKEN=… node scripts/dev.js get <id>
-CAPACITIES_TOKEN=… node scripts/dev.js structures
-CAPACITIES_TOKEN=… node scripts/dev.js curl GET /space
+node --experimental-strip-types scripts/dev.ts help
+node --experimental-strip-types scripts/dev.ts list                     # every DailyLog capture
+node --experimental-strip-types scripts/dev.ts list --prefix=e2e-       # filter by title
+node --experimental-strip-types scripts/dev.ts clean --prefix=e2e-      # delete e2e leftovers
+node --experimental-strip-types scripts/dev.ts clean --dry-run          # preview
+node --experimental-strip-types scripts/dev.ts delete <id> [<id>...]
+node --experimental-strip-types scripts/dev.ts get <id>
+node --experimental-strip-types scripts/dev.ts structures
+node --experimental-strip-types scripts/dev.ts curl GET /space
 
-# Package the .alfredworkflow. Runs unit tests; runs e2e if CAPACITIES_TOKEN
-# is set and SKIP_E2E is not 1.
-./package.sh
-SKIP_E2E=1 ./package.sh
+# Package the .alfredworkflow. Runs unit tests, builds JXA bundles, and zips.
+make package
 
 # Run a JXA entry script from the shell (Alfred substitute for debugging).
 # For a real workspace, use the id of your DailyLog content type; for the
 # bare test space, RootPage works.
 env CAPACITIES_TOKEN=… CAPACITIES_LOG_STRUCTURE_ID=RootPage \
-    osascript -l JavaScript send_to_daily_note.js 'test capture'
+    osascript -l JavaScript dist/send_to_daily_note.js 'test capture'
 ```
 
 CI (`.github/workflows/test.yml`) runs unit tests on every push and PR. The release workflow (`release.yml`) fires on merges to `main` with a bumped `info.plist:version`, tags `vX.Y.Z`, and publishes the `.alfredworkflow`.
@@ -216,18 +220,18 @@ CI (`.github/workflows/test.yml`) runs unit tests on every push and PR. The rele
 
 Do all four steps or nothing works end‑to‑end.
 
-1. **Add an op** in `ops.js`. Two‑method contract, exports name in the `ops` map at the bottom.
-2. **Use it in a flow** in `flows.js`. Import from the same `ops` object; call via `run(MyOp, input, transport)`.
-3. **Test the op** in `test/ops.test.js` — assert URL, method, body shape, and the parse behaviour on success and empty‑body cases.
-4. **Test the flow** in `test/flows.test.js` with `makeMockTransport` fixtures keyed `'METHOD path'`.
+1. **Add an op** in `src/ops.ts`. Two‑method contract, exports name in the `ops` map at the bottom.
+2. **Use it in a flow** in `src/flows.ts`. Import from the same `ops` object; call via `run(MyOp, input, transport)`.
+3. **Test the op** in `test/ops.test.ts` — assert URL, method, body shape, and the parse behaviour on success and empty‑body cases.
+4. **Test the flow** in `test/flows.test.ts` with `makeMockTransport` fixtures keyed `'METHOD path'`.
 
 The transport layer doesn't need touching. Neither does any JXA entry script — flows are what Alfred calls, not ops.
 
 ## Debugging
 
 - `$.NSLog(...)` from JXA lands in `Console.app` under `osascript`. `send_to_daily_note.js` already logs the raw ApiError on failure.
-- `scripts/dev.js curl METHOD /path [body-json]` fires a request through the same transport (with pacing and retry) as everything else. Faster than `curl` in a loop for shape probing.
-- `scripts/dev.js get <id>` prints the full object JSON. Use it to confirm property envelopes.
+- `node --experimental-strip-types scripts/dev.ts curl METHOD /path [body-json]` fires a request through the same transport (with pacing and retry) as everything else. Faster than `curl` in a loop for shape probing.
+- `node --experimental-strip-types scripts/dev.ts get <id>` prints the full object JSON. Use it to confirm property envelopes.
 - On rate‑limit (429 with `error code: 1015`), wait ~60–90 s before retrying anything against the live API.
 
 ## What NOT to do

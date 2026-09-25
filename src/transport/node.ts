@@ -1,30 +1,25 @@
-// transport/node.js — synchronous Node transport. Uses execFileSync('curl',
-// [...args]) so the call is truly sync (matches JXA's blocking transport) and
-// the args are passed as argv — no shell, no quoting, no escaping needed.
-//
-// Used by scripts/e2e.js. Not loaded under JXA.
+import { execFileSync } from 'node:child_process';
+import type { Transport, TransportRequest, TransportResponse } from './types.ts';
 
-'use strict';
+export const API_VERSION = '2026-01-01';
 
-const { execFileSync } = require('node:child_process');
-
-const API_VERSION = '2026-01-01';
-
-// Cloudflare (error code 1015) rate-limits after a burst. Two lines of defence:
-//   - client-side pacing: keep at least MIN_INTERVAL_MS between requests
-//   - retry on 429/503 with backoff, up to MAX_RETRIES
-const MIN_INTERVAL_MS = 200;
+const MIN_INTERVAL_MS = 300;
 const RETRY_STATUSES = new Set([429, 503]);
 const MAX_RETRIES = 5;
-const BACKOFF_MS = [1000, 2000, 4000, 8000, 15000];
+const BACKOFF_MS = [2000, 5000, 10000, 20000, 35000];
 
-function makeNodeTransport({ token, baseUrl }) {
+export interface NodeTransportOptions {
+    token: string;
+    baseUrl?: string;
+}
+
+export function makeNodeTransport({ token, baseUrl }: NodeTransportOptions): Transport {
     if (!token) throw new Error('nodeTransport: token is required');
-    baseUrl = (baseUrl || 'https://api.capacities.io').replace(/\/$/, '');
-    let lastFireAt = 0; // wall-clock ms of most recent send
+    const base = (baseUrl || 'https://api.capacities.io').replace(/\/$/, '');
+    let lastFireAt = 0;
 
-    return function transport(req) {
-        const url = buildUrl(baseUrl, req.path, req.query);
+    return function transport(req: TransportRequest): TransportResponse {
+        const url = buildUrl(base, req.path, req.query);
         const args = [
             '-sS',
             '-o', '-',
@@ -48,7 +43,7 @@ function makeNodeTransport({ token, baseUrl }) {
         }
     };
 
-    function paceSync() {
+    function paceSync(): void {
         const now = Date.now();
         const wait = MIN_INTERVAL_MS - (now - lastFireAt);
         if (wait > 0) sleepSync(wait);
@@ -56,12 +51,13 @@ function makeNodeTransport({ token, baseUrl }) {
     }
 }
 
-function sendOnce(args) {
-    let stdout;
+function sendOnce(args: string[]): TransportResponse {
+    let stdout: string;
     try {
         stdout = execFileSync('curl', args, { encoding: 'utf8', maxBuffer: 50 * 1024 * 1024 });
-    } catch (e) {
-        stdout = String(e.stdout || '') || `curl error: ${e.message}`;
+    } catch (e: unknown) {
+        const err = e as { stdout?: string; message: string };
+        stdout = String(err.stdout || '') || `curl error: ${err.message}`;
         return { status: 0, text: stdout };
     }
     const marker = '\n__HTTP_STATUS__:';
@@ -71,10 +67,7 @@ function sendOnce(args) {
     return { status, text: stdout.slice(0, at) };
 }
 
-function sleepSync(ms) {
-    // Synchronous sleep — Node has no built-in; spawning a short-lived child
-    // that just times out is the simplest zero-dep way that works in every
-    // process configuration.
+function sleepSync(ms: number): void {
     execFileSync(
         process.execPath,
         ['-e', `setTimeout(() => process.exit(0), ${ms})`],
@@ -82,10 +75,14 @@ function sleepSync(ms) {
     );
 }
 
-function buildUrl(base, path, query) {
+export function buildUrl(
+    base: string,
+    path: string,
+    query?: Record<string, string | number | boolean | null | undefined>,
+): string {
     let url = base + path;
     if (query) {
-        const pairs = [];
+        const pairs: string[] = [];
         for (const k of Object.keys(query)) {
             if (query[k] == null) continue;
             pairs.push(encodeURIComponent(k) + '=' + encodeURIComponent(String(query[k])));
@@ -94,5 +91,3 @@ function buildUrl(base, path, query) {
     }
     return url;
 }
-
-module.exports = { makeNodeTransport, API_VERSION };
