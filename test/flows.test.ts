@@ -12,6 +12,9 @@ import {
     getDailyNotes,
     getDailyNote,
     deleteObject,
+    createWeblink,
+    extractParagraphs,
+    formatMarkdownLink,
 } from '../src/flows.ts';
 import { ApiError } from '../src/runner.ts';
 import { makeMockTransport } from '../src/transport/mock.ts';
@@ -269,4 +272,54 @@ test('deleteObject: calls DeleteObject', () => {
     assert.equal(res, null);
     assert.equal(t.calls.length, 1);
     assert.equal((t.calls[0].query as any).id, 'obj-to-del');
+});
+
+test('extractParagraphs: handles default and custom counts', () => {
+    const text = 'Para 1\n\nPara 2\n\nPara 3\n\nPara 4\n\nPara 5';
+    assert.equal(extractParagraphs(text), 'Para 1\n\nPara 2\n\nPara 3');
+    assert.equal(extractParagraphs(text, 2), 'Para 1\n\nPara 2');
+    assert.equal(extractParagraphs(text, 10), text);
+});
+
+test('extractParagraphs: handles empty input, whitespace, and single paragraphs', () => {
+    assert.equal(extractParagraphs(''), '');
+    assert.equal(extractParagraphs('   \n\n   '), '');
+    assert.equal(extractParagraphs('Single para'), 'Single para');
+    assert.equal(extractParagraphs('P1\n\n\n\n\nP2\n\n  \n\nP3'), 'P1\n\nP2\n\nP3');
+});
+
+test('formatMarkdownLink: creates [title](url) links', () => {
+    assert.equal(formatMarkdownLink('My Page', 'https://example.com'), '[My Page](https://example.com)');
+    assert.equal(formatMarkdownLink('', 'https://example.com'), '[https://example.com](https://example.com)');
+});
+
+test('createWeblink: builds typed CreateObjectFromUrlBody and calls transport', () => {
+    const t = makeMockTransport({
+        'POST /object/url': {
+            status: 200,
+            text: JSON.stringify({ id: 'wl-100', structureId: 'MediaWebResource' }),
+        },
+    });
+
+    const res = createWeblink(t, {
+        url: 'https://example.com/article',
+        title: 'Article Title',
+        text: 'First paragraph summary.\n\nSecond paragraph body.',
+    });
+
+    assert.equal(res.id, 'wl-100');
+    assert.equal(t.calls.length, 1);
+    assert.equal(t.calls[0].path, '/object/url');
+    assert.equal(t.calls[0].method, 'POST');
+
+    const body = t.calls[0].body as any;
+    assert.equal(body.url, 'https://example.com/article');
+    assert.deepEqual(body.properties.title, { type: 'title', title: { value: 'Article Title' } });
+    assert.deepEqual(body.properties.description, { type: 'text', text: { value: 'First paragraph summary.' } });
+    assert.equal(body.markdown, 'First paragraph summary.\n\nSecond paragraph body.');
+});
+
+test('createWeblink: throws on missing url', () => {
+    const t = makeMockTransport({});
+    assert.throws(() => createWeblink(t, { url: '', title: 'Test' }));
 });

@@ -40,6 +40,15 @@ cap:log 2026-09-01..2026-09-07
 
 Alfred lists matching captures newest‑first; pressing Enter opens the object in Capacities.
 
+### Save Chrome tab as Weblink
+
+```
+mdlink             # captures active Chrome tab, extracts first 3 paragraphs
+mdlink 5           # captures active Chrome tab, extracts first 5 paragraphs
+```
+
+Creates a `Weblink` (`MediaWebResource`) in Capacities with the page title, URL, and the first `n` paragraphs in its notes body, and copies the Markdown link `[page title](https://page/url)` directly to your clipboard.
+
 ## How it works
 
 Written in TypeScript in `src/` and bundled with `esbuild` into self-contained JXA scripts for Alfred:
@@ -49,11 +58,11 @@ Written in TypeScript in `src/` and bundled with `esbuild` into self-contained J
 | `src/types.ts` | Strongly typed Capacities v1 API payloads, structures, and flow contracts. |
 | `src/ops.ts` | One object per Capacities endpoint — `build(input)` and `parse(text)`. |
 | `src/runner.ts` | Synchronous `run(op, input, transport)`, `parseRangeExpression`, `filterByDate`. |
-| `src/flows.ts` | Named compositions: `capture`, `setup`, `listInRange`, `getDailyNotes`. |
+| `src/flows.ts` | Named compositions: `capture`, `setup`, `listInRange`, `getDailyNotes`, `createWeblink`. |
 | `src/transport/jxa.ts` | Synchronous `NSTask` + curl transport for the Alfred JXA runtime. |
 | `src/transport/node.ts` | Synchronous `execFileSync('curl')` transport for test and dev tooling. |
 | `src/transport/mock.ts` | Synchronous fixture transport used by unit tests. |
-| `src/entries/` | Alfred entrypoints (`capture.ts`, `setup.ts`, `log.ts`), bundled into standalone scripts in `dist/`. |
+| `src/entries/` | Alfred entrypoints (`capture.ts`, `setup.ts`, `log.ts`, `mdlink.ts`), bundled into standalone scripts in `dist/`. |
 
 The bundled entry scripts are completely self-contained with zero runtime `eval()` and zero external dependencies.
 

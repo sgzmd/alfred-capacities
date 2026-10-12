@@ -7,6 +7,7 @@ declare const Application: any;
 export function initJxaBridge(): void {
     if (typeof ObjC !== 'undefined') {
         ObjC.import('Foundation');
+        ObjC.import('AppKit');
     }
 }
 
@@ -82,4 +83,17 @@ export function alfredEmpty(from: Date, to: Date): string {
             valid: false,
         }],
     });
+}
+
+export function copyToClipboard(text: string): void {
+    try {
+        if (typeof ObjC !== 'undefined') {
+            ObjC.import('AppKit');
+            const pasteboard = $.NSPasteboard.generalPasteboard;
+            pasteboard.clearContents;
+            pasteboard.setStringForType($(String(text)), $.NSPasteboardTypeString);
+        }
+    } catch (e: unknown) {
+        nsLog(`copyToClipboard failed: ${e}`);
+    }
 }

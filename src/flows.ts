@@ -10,6 +10,7 @@ import {
     CreateLogObject,
     AppendEntityToDailyNote,
     DeleteObject,
+    CreateWeblinkObject,
 } from './ops.ts';
 import type { Transport } from './transport/types.ts';
 import type {
@@ -22,6 +23,9 @@ import type {
     CapacitiesObject,
     CapacitiesStructure,
     GetDailyNotesOptions,
+    CreateWeblinkInput,
+    CreateObjectFromUrlBody,
+    GetObjectResponse,
 } from './types.ts';
 
 export const DEFAULT_LOG_TITLES = ['DailyLog', 'Daily Log', 'Log', 'Note'];
@@ -167,4 +171,56 @@ export function getDailyNote(
 
 export function deleteObject(transport: Transport, { id }: { id: string }): null {
     return run(DeleteObject, { id }, transport);
+}
+
+// extractParagraphs: splits markdown by blank lines, filters non-empty chunks, and takes the first count paragraphs.
+export function extractParagraphs(markdown: string, count: number = 3): string {
+    const trimmed = String(markdown || '').trim();
+    if (!trimmed) return '';
+    const n = Number.isFinite(count) && count > 0 ? Math.floor(count) : 3;
+    const paragraphs = trimmed
+        .split(/\r?\n\s*\r?\n/)
+        .map(p => p.trim())
+        .filter(p => p.length > 0);
+    return paragraphs.slice(0, n).join('\n\n');
+}
+
+// formatMarkdownLink: formats a standard markdown link [title](url)
+export function formatMarkdownLink(title: string, url: string): string {
+    const cleanUrl = String(url || '').trim();
+    const cleanTitle = String(title || cleanUrl || '').trim();
+    return `[${cleanTitle}](${cleanUrl})`;
+}
+
+// createWeblink: creates a Weblink (MediaWebResource) object using typed CreateObjectFromUrlBody
+export function createWeblink(
+    transport: Transport,
+    { url, title, text }: CreateWeblinkInput,
+): GetObjectResponse {
+    const trimmedUrl = String(url || '').trim();
+    if (!trimmedUrl) throw new Error('createWeblink: url is required');
+
+    const body: CreateObjectFromUrlBody = {
+        url: trimmedUrl,
+        properties: {
+            title: { type: 'title', title: { value: title || trimmedUrl } },
+        },
+    };
+
+    if (text && text.trim()) {
+        const trimmedText = text.trim();
+        body.markdown = trimmedText;
+        const firstPara = trimmedText.split(/\r?\n\s*\r?\n/)[0]?.trim();
+        if (firstPara) {
+            body.properties = {
+                ...body.properties,
+                description: {
+                    type: 'text',
+                    text: { value: firstPara.slice(0, 300) },
+                },
+            };
+        }
+    }
+
+    return run(CreateWeblinkObject, body, transport);
 }

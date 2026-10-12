@@ -7,6 +7,8 @@ import type {
     SearchObjectsResponse,
     SearchObjectResult,
     CreateObjectMarkdownBody,
+    CreateObjectFromUrlBody,
+    CreateObjectFromUrlProperties,
     SaveToDailyNoteBody,
     GetObjectParams,
     DeleteObjectParams,
@@ -27,6 +29,8 @@ export type {
     SearchObjectsResponse,
     SearchObjectResult,
     CreateObjectMarkdownBody,
+    CreateObjectFromUrlBody,
+    CreateObjectFromUrlProperties,
     SaveToDailyNoteBody,
     GetObjectParams,
     DeleteObjectParams,
@@ -97,4 +101,10 @@ export interface ListInRangeInput {
 export interface GetDailyNotesOptions {
     date?: Date;
     marginDays?: number;
+}
+
+export interface CreateWeblinkInput {
+    url: string;
+    title: string;
+    text?: string;
 }

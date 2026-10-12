@@ -86,6 +86,32 @@
 				<false/>
 			</dict>
 		</array>
+		<key>A5_MDLINK_KEYWORD</key>
+		<array>
+			<dict>
+				<key>destinationuid</key>
+				<string>B5_RUN_MDLINK</string>
+				<key>modifiers</key>
+				<integer>0</integer>
+				<key>modifiersubtext</key>
+				<string></string>
+				<key>vitoclose</key>
+				<false/>
+			</dict>
+		</array>
+		<key>B5_RUN_MDLINK</key>
+		<array>
+			<dict>
+				<key>destinationuid</key>
+				<string>C5_NOTIFICATION</string>
+				<key>modifiers</key>
+				<integer>0</integer>
+				<key>modifiersubtext</key>
+				<string></string>
+				<key>vitoclose</key>
+				<false/>
+			</dict>
+		</array>
 	</dict>
 	<key>createdby</key>
 	<string>Roman Kirillov</string>
@@ -308,6 +334,71 @@
 			<key>version</key>
 			<integer>1</integer>
 		</dict>
+		<dict>
+			<key>config</key>
+			<dict>
+				<key>argumenttype</key>
+				<integer>1</integer>
+				<key>keyword</key>
+				<string>mdlink</string>
+				<key>subtext</key>
+				<string>Create Weblink in Capacities &amp; copy [title](url) (optional: paragraphs n, default 3)</string>
+				<key>text</key>
+				<string>Capture Chrome Tab as Weblink</string>
+				<key>withspace</key>
+				<false/>
+			</dict>
+			<key>type</key>
+			<string>alfred.workflow.input.keyword</string>
+			<key>uid</key>
+			<string>A5_MDLINK_KEYWORD</string>
+			<key>version</key>
+			<integer>1</integer>
+		</dict>
+		<dict>
+			<key>config</key>
+			<dict>
+				<key>concurrently</key>
+				<false/>
+				<key>escaping</key>
+				<integer>102</integer>
+				<key>script</key>
+				<string>osascript -l JavaScript mdlink.js "$1"</string>
+				<key>scriptargtype</key>
+				<integer>1</integer>
+				<key>scriptfile</key>
+				<string></string>
+				<key>type</key>
+				<integer>0</integer>
+			</dict>
+			<key>type</key>
+			<string>alfred.workflow.action.script</string>
+			<key>uid</key>
+			<string>B5_RUN_MDLINK</string>
+			<key>version</key>
+			<integer>2</integer>
+		</dict>
+		<dict>
+			<key>config</key>
+			<dict>
+				<key>lastpathcomponent</key>
+				<false/>
+				<key>onlyshowifquerypopulated</key>
+				<true/>
+				<key>removeextension</key>
+				<false/>
+				<key>text</key>
+				<string>{query}</string>
+				<key>title</key>
+				<string>Capacities Weblink</string>
+			</dict>
+			<key>type</key>
+			<string>alfred.workflow.output.notification</string>
+			<key>uid</key>
+			<string>C5_NOTIFICATION</string>
+			<key>version</key>
+			<integer>1</integer>
+		</dict>
 	</array>
 	<key>uidata</key>
 	<dict>
@@ -373,6 +464,27 @@
 			<integer>490</integer>
 			<key>ypos</key>
 			<integer>310</integer>
+		</dict>
+		<key>A5_MDLINK_KEYWORD</key>
+		<dict>
+			<key>xpos</key>
+			<integer>50</integer>
+			<key>ypos</key>
+			<integer>570</integer>
+		</dict>
+		<key>B5_RUN_MDLINK</key>
+		<dict>
+			<key>xpos</key>
+			<integer>270</integer>
+			<key>ypos</key>
+			<integer>570</integer>
+		</dict>
+		<key>C5_NOTIFICATION</key>
+		<dict>
+			<key>xpos</key>
+			<integer>490</integer>
+			<key>ypos</key>
+			<integer>570</integer>
 		</dict>
 	</dict>
 	<key>userconfigurationconfig</key>
