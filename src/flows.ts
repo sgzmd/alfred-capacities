@@ -192,13 +192,80 @@ export function formatMarkdownLink(title: string, url: string): string {
     return `[${cleanTitle}](${cleanUrl})`;
 }
 
-// createWeblink: creates a Weblink (MediaWebResource) object using typed CreateObjectFromUrlBody
+// findWeblinkByUrl: searches for an existing Weblink (MediaWebResource) object matching the URL
+export function findWeblinkByUrl(
+    transport: Transport,
+    { url, title }: { url: string; title?: string },
+): CapacitiesObject | null {
+    const targetUrl = String(url || '').trim();
+    if (!targetUrl) return null;
+
+    const seenIds = new Set<string>();
+
+    // Step 1: Search by title if available
+    const searchTitle = String(title || '').trim();
+    if (searchTitle.length >= 2) {
+        try {
+            const q = searchTitle.slice(0, 60);
+            const searchResp = run(SearchObjects, { query: q, structureIds: ['MediaWebResource'] }, transport);
+            const hits = searchResp?.results || [];
+            for (const hit of hits) {
+                if (seenIds.has(hit.id)) continue;
+                seenIds.add(hit.id);
+                const full = run(GetObject, { id: hit.id }, transport);
+                const refUrl = readProperty(full, 'media_URLReference');
+                if (typeof refUrl === 'string' && refUrl.trim() === targetUrl) {
+                    return full;
+                }
+            }
+        } catch {
+            // Non-critical: continue to fallback
+        }
+    }
+
+    // Step 2: Enumerate MediaWebResource stubs to find title matches
+    try {
+        const listResp = run(ListObjectsByStructure, { structureId: 'MediaWebResource' }, transport);
+        const stubs = listResp?.results || [];
+        const titleLc = searchTitle.toLowerCase();
+        const candidateStubs = stubs.filter(s => {
+            if (seenIds.has(s.id)) return false;
+            return searchTitle && (s.title || '').toLowerCase() === titleLc;
+        });
+
+        for (const stub of candidateStubs) {
+            seenIds.add(stub.id);
+            const full = run(GetObject, { id: stub.id }, transport);
+            const refUrl = readProperty(full, 'media_URLReference');
+            if (typeof refUrl === 'string' && refUrl.trim() === targetUrl) {
+                return full;
+            }
+        }
+    } catch {
+        // Ignored
+    }
+
+    return null;
+}
+
+// createWeblink: creates a Weblink (MediaWebResource) object using typed CreateObjectFromUrlBody.
+// If a Weblink with this URL already exists, removes the existing one and re-creates it with the updated text.
 export function createWeblink(
     transport: Transport,
     { url, title, text }: CreateWeblinkInput,
 ): GetObjectResponse {
     const trimmedUrl = String(url || '').trim();
     if (!trimmedUrl) throw new Error('createWeblink: url is required');
+
+    // Check if a Weblink with this URL already exists
+    const existing = findWeblinkByUrl(transport, { url: trimmedUrl, title });
+    if (existing && existing.id) {
+        try {
+            run(DeleteObject, { id: existing.id }, transport);
+        } catch {
+            // Proceed to create if delete fails
+        }
+    }
 
     const body: CreateObjectFromUrlBody = {
         url: trimmedUrl,

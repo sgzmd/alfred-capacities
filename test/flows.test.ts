@@ -13,6 +13,7 @@ import {
     getDailyNote,
     deleteObject,
     createWeblink,
+    findWeblinkByUrl,
     extractParagraphs,
     formatMarkdownLink,
 } from '../src/flows.ts';
@@ -295,6 +296,8 @@ test('formatMarkdownLink: creates [title](url) links', () => {
 
 test('createWeblink: builds typed CreateObjectFromUrlBody and calls transport', () => {
     const t = makeMockTransport({
+        'POST /objects/search': { status: 200, text: '{"results":[]}' },
+        'GET /objects/structure': { status: 200, text: '{"results":[]}' },
         'POST /object/url': {
             status: 200,
             text: JSON.stringify({ id: 'wl-100', structureId: 'MediaWebResource' }),
@@ -308,11 +311,11 @@ test('createWeblink: builds typed CreateObjectFromUrlBody and calls transport', 
     });
 
     assert.equal(res.id, 'wl-100');
-    assert.equal(t.calls.length, 1);
-    assert.equal(t.calls[0].path, '/object/url');
-    assert.equal(t.calls[0].method, 'POST');
+    const createCall = t.calls.find(c => c.path === '/object/url');
+    assert.ok(createCall);
+    assert.equal(createCall.method, 'POST');
 
-    const body = t.calls[0].body as any;
+    const body = createCall.body as any;
     assert.equal(body.url, 'https://example.com/article');
     assert.deepEqual(body.properties.title, { type: 'title', title: { value: 'Article Title' } });
     assert.deepEqual(body.properties.description, { type: 'text', text: { value: 'First paragraph summary.' } });
@@ -322,4 +325,65 @@ test('createWeblink: builds typed CreateObjectFromUrlBody and calls transport', 
 test('createWeblink: throws on missing url', () => {
     const t = makeMockTransport({});
     assert.throws(() => createWeblink(t, { url: '', title: 'Test' }));
+});
+
+test('findWeblinkByUrl: finds existing weblink matching media_URLReference', () => {
+    const t = makeMockTransport({
+        'POST /objects/search': {
+            status: 200,
+            text: JSON.stringify({ results: [{ id: 'wl-existing', title: 'Example Title' }] }),
+        },
+        'GET /object': {
+            status: 200,
+            text: JSON.stringify({
+                id: 'wl-existing',
+                title: 'Example Title',
+                properties: {
+                    media_URLReference: { type: 'url', url: { value: 'https://example.com/target' } },
+                },
+            }),
+        },
+    });
+
+    const hit = findWeblinkByUrl(t, { url: 'https://example.com/target', title: 'Example Title' });
+    assert.ok(hit);
+    assert.equal(hit?.id, 'wl-existing');
+});
+
+test('createWeblink: deletes existing weblink if URL already exists before creating new one', () => {
+    const t = makeMockTransport({
+        'POST /objects/search': {
+            status: 200,
+            text: JSON.stringify({ results: [{ id: 'wl-old', title: 'Old Title' }] }),
+        },
+        'GET /object': {
+            status: 200,
+            text: JSON.stringify({
+                id: 'wl-old',
+                title: 'Old Title',
+                properties: {
+                    media_URLReference: { type: 'url', url: { value: 'https://example.com/target' } },
+                },
+            }),
+        },
+        'DELETE /object': {
+            status: 204,
+            text: '',
+        },
+        'POST /object/url': {
+            status: 200,
+            text: JSON.stringify({ id: 'wl-new', structureId: 'MediaWebResource' }),
+        },
+    });
+
+    const res = createWeblink(t, {
+        url: 'https://example.com/target',
+        title: 'Old Title',
+        text: 'Updated notes',
+    });
+
+    assert.equal(res.id, 'wl-new');
+    const deleteCall = t.calls.find(c => c.path === '/object' && c.method === 'DELETE');
+    assert.ok(deleteCall, 'Must call DELETE /object for existing id');
+    assert.equal((deleteCall?.query as any).id, 'wl-old');
 });
