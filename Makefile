@@ -27,7 +27,7 @@ check:
 
 package: check test build
 	@rm -f $(WORKFLOW_NAME)
-	@cd dist && zip -q -r ../$(WORKFLOW_NAME) send_to_daily_note.js setup.js log.js
+	@cd dist && zip -q -r ../$(WORKFLOW_NAME) send_to_daily_note.js setup.js log.js mdlink.js
 	@zip -q -u $(WORKFLOW_NAME) info.plist icon.png
 	@echo "Successfully packaged $(WORKFLOW_NAME)"
 

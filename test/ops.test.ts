@@ -12,6 +12,7 @@ import {
     CreateLogObject,
     AppendEntityToDailyNote,
     DeleteObject,
+    CreateWeblinkObject,
     splitTitleAndBody,
     stripMarkdownInline,
     escapeForH1,
@@ -192,4 +193,30 @@ test('DeleteObject: uses query-string id', () => {
 test('204-style ops parse empty body to null', () => {
     assert.equal(AppendEntityToDailyNote.parse(''), null);
     assert.equal(DeleteObject.parse(''), null);
+});
+
+test('CreateWeblinkObject: build creates POST /object/url with typed body', () => {
+    const input = {
+        url: 'https://example.com/test',
+        properties: {
+            title: { type: 'title' as const, title: { value: 'Example' } },
+        },
+        markdown: 'Sample notes',
+    };
+    const req = CreateWeblinkObject.build(input);
+    assert.equal(req.method, 'POST');
+    assert.equal(req.path, '/object/url');
+    assert.deepEqual(req.body, input);
+});
+
+test('CreateWeblinkObject: rejects missing or empty url', () => {
+    assert.throws(() => CreateWeblinkObject.build({ url: '' } as any));
+    assert.throws(() => CreateWeblinkObject.build(null as any));
+});
+
+test('CreateWeblinkObject: parses response JSON', () => {
+    const json = '{"id":"wl-1","structureId":"MediaWebResource"}';
+    const parsed = CreateWeblinkObject.parse(json);
+    assert.equal(parsed.id, 'wl-1');
+    assert.equal(parsed.structureId, 'MediaWebResource');
 });

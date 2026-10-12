@@ -17,6 +17,7 @@ const entries = [
     { in: 'src/entries/capture.ts', out: 'send_to_daily_note' },
     { in: 'src/entries/setup.ts', out: 'setup' },
     { in: 'src/entries/log.ts', out: 'log' },
+    { in: 'src/entries/mdlink.ts', out: 'mdlink' },
 ];
 
 console.log('→ Building JXA bundles with esbuild...');
@@ -27,6 +28,12 @@ for (const entry of entries) {
         outfile: path.resolve(dist, `${entry.out}.js`),
         bundle: true,
         platform: 'neutral',
+        mainFields: ['module', 'main'],
+        define: {
+            'process.env.NODE_ENV': '"production"',
+            'process.env': '{}',
+            'process': 'undefined',
+        },
         target: 'es2020',
         format: 'iife',
         banner: {

@@ -15,6 +15,8 @@ import type {
     GetObjectParams,
     DeleteObjectParams,
     SearchObjectsBody,
+    CreateObjectFromUrlBody,
+    GetObjectResponse,
 } from './types.ts';
 
 const jsonParse = <T>(t: string): T => (t && t.length ? JSON.parse(t) : (null as unknown as T));
@@ -162,6 +164,19 @@ export const DeleteObject: Op<DeleteObjectParams, null> = {
     parse: nullParse,
 };
 
+export const CreateWeblinkObject: Op<CreateObjectFromUrlBody, GetObjectResponse> = {
+    name: 'CreateWeblinkObject',
+    build: (body) => {
+        if (!body || !body.url) throw new Error('CreateWeblinkObject: url is required');
+        return {
+            method: 'POST',
+            path: '/object/url',
+            body,
+        };
+    },
+    parse: jsonParse<GetObjectResponse>,
+};
+
 export const ops = {
     GetSpace,
     ListStructures,
@@ -171,4 +186,5 @@ export const ops = {
     CreateLogObject,
     AppendEntityToDailyNote,
     DeleteObject,
+    CreateWeblinkObject,
 };

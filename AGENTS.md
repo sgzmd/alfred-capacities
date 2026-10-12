@@ -6,11 +6,12 @@ Reference for anyone — human or LLM — coming into this repo. Reads top‑to�
 
 Alfred workflow (JXA) plus a small Node dev harness that lets you `cap <note>` and get a first‑class, retrievable capture in Capacities. Everything talks to the **Capacities v1 API** (`https://api.capacities.io`, `Capacities-API-Version: 2026-01-01` header). The old beta surface was retired on 2026‑09‑01; nothing in the repo touches it.
 
-Three user‑visible entry points, all served by the same pipeline:
+Four user‑visible entry points, all served by the same pipeline:
 
 - `cap <note>` → create an object of the user's **DailyLog content type** (a user‑defined structure), embed it in today's daily note.
 - `cap:setup` → discover the space, find a content type titled `DailyLog` (or `Daily Log` / `Log` / `Note`), persist its structure id into workflow config. **The user has to create the content type in the Capacities app first** — the API can't create structures.
 - `cap:log [range]` → list every DailyLog object in a date range (`today`, `week`, `N`, `YYYY-MM-DD..YYYY-MM-DD`). Enumerates by structure id, filters by `createdAt` client-side.
+- `mdlink [n]` → capture the active Chrome tab's URL and title, extract its DOM, convert to Markdown, extract first `n` paragraphs (default 3), create a `Weblink` (`MediaWebResource`) object in Capacities, and copy `[title](url)` to clipboard.
 
 There is no "DailyLog tag" — the object's structure is the retrieval key. Every capture *is* a DailyLog, not a page‑with‑a‑tag.
 
@@ -74,6 +75,7 @@ src/jxa-utils.ts        JXA helpers: readEnv, saveConfig, formatWhen, alfredErro
 src/entries/capture.ts  `cap <note>` — capture entry (bundles to dist/send_to_daily_note.js)
 src/entries/setup.ts    `cap:setup` — bootstrap entry (bundles to dist/setup.js)
 src/entries/log.ts      `cap:log <range>` — Alfred script filter (bundles to dist/log.js)
+src/entries/mdlink.ts   `mdlink [n]` — Chrome tab Weblink capture (bundles to dist/mdlink.js)
 
 scripts/build.mjs       esbuild bundler producing self-contained JXA scripts
 scripts/e2e.ts          live smoke test against a real space (auto-reads .env)
@@ -140,6 +142,18 @@ Range grammar (`parseRangeExpression`): `""` / `"week"` = last 7d, `"today"` = m
 Search‑based, because `GET /blocks/daily-note` doesn't exist. Iterates over `[date - marginDays, date + marginDays]`, searches `structureIds: ['RootDailyNote']` with each ISO day as the query, dedupes and hydrates every hit. Default `marginDays = 1` covers the "the append landed on the neighbouring UTC day" edge case above.
 
 `getDailyNote(...)` is a back‑compat wrapper returning the first result.
+
+### `createWeblink(transport, { url, title, text })`
+
+Creates a first‑class `Weblink` (`MediaWebResource`) object in Capacities using `@capacities/api` data contracts (`CreateObjectFromUrlBody`).
+
+1. `POST /object/url` with:
+   - `url`: the page URL.
+   - `properties.title`: the page title.
+   - `properties.description`: first paragraph (up to 300 chars) as preview.
+   - `markdown`: the first `n` paragraphs extracted from the page's converted DOM. Capacities automatically populates these into `blocks.media_notes`.
+2. Returns `GetObjectResponse`.
+3. The entry point (`src/entries/mdlink.ts`) copies the Markdown link `[title](url)` to the macOS pasteboard via `NSPasteboard` and returns a confirmation message for Alfred.
 
 ## Capacities v1 API quirks worth remembering
 

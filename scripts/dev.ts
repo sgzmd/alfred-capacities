@@ -38,6 +38,7 @@ const commands = {
     delete: deleteById,
     get: getObject,
     structures: listStructures,
+    weblink: createWeblinkCmd,
     curl: rawRequest,
     help: printHelp,
 };
@@ -154,6 +155,16 @@ function die(msg: string): never {
     process.exit(1);
 }
 
+function createWeblinkCmd() {
+    const url = rest[0];
+    if (!url) die('weblink: url is required. Usage: node scripts/dev.ts weblink <url> [title] [text]');
+    const title = rest[1] || url;
+    const text = rest[2];
+    const res = flows.createWeblink(transport, { url, title, text });
+    console.log(`Created Weblink: ${res.id}`);
+    console.log(JSON.stringify(res, null, 2));
+}
+
 function printHelp() {
     console.log(`
 Maintenance CLI for the alfred-capacities space.
@@ -167,6 +178,7 @@ Requires CAPACITIES_TOKEN (read automatically from .env if present).
   delete <id> [<id>...]      DELETE these ids
   get <id>                   full object JSON (properties, blocks, …)
   structures                 list structures in the space
+  weblink <url> [title] [text] create a Weblink object via flows.createWeblink
   curl METHOD /path [body]   raw request through the same transport
 `.trim());
 }
