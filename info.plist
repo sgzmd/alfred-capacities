@@ -346,7 +346,7 @@
 				<key>text</key>
 				<string>Capture Chrome Tab as Weblink</string>
 				<key>withspace</key>
-				<false/>
+				<true/>
 			</dict>
 			<key>type</key>
 			<string>alfred.workflow.input.keyword</string>
